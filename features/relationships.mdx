@@ -1,0 +1,1240 @@
+---
+title: "Relationships"
+description: "Connect and populate related documents across collections"
+---
+
+# Relationships
+
+Build relational data structures by linking documents and users together with automatic population support across all platforms.
+
+<Note>
+  Relationships enable you to structure complex data models like social
+  networks, e-commerce systems, and collaborative applications.
+</Note>
+
+## Overview
+
+Cocobase supports powerful relationship features:
+
+- **Document references** - Store IDs to link documents
+- **Population** - Automatically fetch related data
+- **Nested population** - Multi-level relationship resolution
+- **User-to-user relationships** - Followers, friends, referrals
+- **User-to-document relationships** - Bookmarks, favorites, ownership
+- **Document-to-document relationships** - Comments, reviews, hierarchies
+
+---
+
+## Relationship Types
+
+### One-to-One
+
+A single reference to another entity.
+
+```json
+{
+  "id": "user_123",
+  "email": "john@example.com",
+  "data": {
+    "username": "johndoe",
+    "referred_by": "user_456"
+  }
+}
+```
+
+### One-to-Many / Many-to-Many
+
+Arrays of references for multiple relationships.
+
+```json
+{
+  "id": "user_123",
+  "email": "john@example.com",
+  "data": {
+    "username": "johndoe",
+    "followers_ids": ["user_456", "user_789", "user_012"],
+    "following_ids": ["user_456", "user_999"]
+  }
+}
+```
+
+---
+
+## Creating Relationships
+
+### User to User
+
+<Tabs>
+<Tab title="JavaScript">
+```javascript
+import { Cocobase } from 'cocobase';
+
+const db = new Cocobase({ apiKey: 'your-api-key' });
+
+// User signs up with referral
+await db.auth.signup({
+  email: 'bob@example.com',
+  password: 'password123',
+  data: {
+    username: 'bob',
+    referred_by: 'user_abc123'
+  }
+});
+
+// Follow a user
+const currentUser = await db.auth.getUser();
+const currentFollowing = currentUser.data.following_ids || [];
+
+await db.auth.updateUser({
+  data: {
+    following_ids: [...currentFollowing, 'user_to_follow']
+  }
+});
+
+// Unfollow a user
+await db.auth.updateUser({
+  data: {
+    following_ids: currentFollowing.filter(id => id !== 'user_to_unfollow')
+  }
+});
+```
+</Tab>
+
+<Tab title="Dart">
+```dart
+import 'package:cocobase/cocobase.dart';
+
+final db = Cocobase(CocobaseConfig(apiKey: 'your-api-key'));
+
+// User signs up with referral
+await db.auth.signup(
+  email: 'bob@example.com',
+  password: 'password123',
+  data: {
+    'username': 'bob',
+    'referred_by': 'user_abc123',
+  },
+);
+
+// Follow a user
+final currentUser = await db.auth.getUser();
+final currentFollowing = List<String>.from(
+  currentUser.data['following_ids'] ?? []
+);
+
+await db.auth.updateUser({
+  'data': {
+    'following_ids': [...currentFollowing, 'user_to_follow'],
+  }
+});
+
+// Unfollow a user
+await db.auth.updateUser({
+  'data': {
+    'following_ids': currentFollowing.where((id) => id != 'user_to_unfollow').toList(),
+  }
+});
+```
+</Tab>
+
+<Tab title="Go">
+```go
+package main
+
+import (
+    "context"
+    "github.com/lordace-coder/cocobase-go/cocobase"
+)
+
+func main() {
+    client := cocobase.NewClient(cocobase.Config{
+        APIKey: "your-api-key",
+    })
+
+    ctx := context.Background()
+
+    // User signs up with referral
+    _, err := client.Signup(ctx, cocobase.SignupRequest{
+        Email:    "bob@example.com",
+        Password: "password123",
+        Data: map[string]interface{}{
+            "username":    "bob",
+            "referred_by": "user_abc123",
+        },
+    })
+
+    // Update user relationships
+    updates := map[string]interface{}{
+        "data": map[string]interface{}{
+            "following_ids": []string{"user_456", "user_789"},
+        },
+    }
+
+    _, err = client.UpdateUser(ctx, updates)
+}
+```
+</Tab>
+
+<Tab title="Python">
+```python
+import requests
+
+API_KEY = 'your-api-key'
+BASE_URL = 'https://api.cocobase.buzz'
+headers = {'X-API-Key': API_KEY, 'Content-Type': 'application/json'}
+
+# User signs up with referral
+signup_data = {
+    'email': 'bob@example.com',
+    'password': 'password123',
+    'data': {
+        'username': 'bob',
+        'referred_by': 'user_abc123'
+    }
+}
+
+response = requests.post(
+    f'{BASE_URL}/auth-collections/signup',
+    headers=headers,
+    json=signup_data
+)
+
+token = response.json()['access_token']
+
+# Follow a user
+auth_headers = {
+    'Authorization': f'Bearer {token}',
+    'Content-Type': 'application/json'
+}
+
+# Get current user
+user_response = requests.get(
+    f'{BASE_URL}/auth-collections/user',
+    headers=auth_headers
+)
+current_user = user_response.json()
+
+# Update following list
+current_following = current_user.get('data', {}).get('following_ids', [])
+new_following = current_following + ['user_to_follow']
+
+requests.patch(
+    f'{BASE_URL}/auth-collections/user',
+    headers=auth_headers,
+    json={'data': {'following_ids': new_following}}
+)
+```
+</Tab>
+
+<Tab title="HTTP">
+```bash
+# User signs up with referral
+curl -X POST https://api.cocobase.buzz/auth-collections/signup \
+  -H "X-API-Key: your-api-key" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "email": "bob@example.com",
+    "password": "password123",
+    "data": {
+      "username": "bob",
+      "referred_by": "user_abc123"
+    }
+  }'
+
+# Follow a user (update following list)
+curl -X PATCH https://api.cocobase.buzz/auth-collections/user \
+  -H "Authorization: Bearer YOUR_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "data": {
+      "following_ids": ["user_456", "user_789", "user_to_follow"]
+    }
+  }'
+```
+</Tab>
+</Tabs>
+
+### User to Document
+
+<Tabs>
+<Tab title="JavaScript">
+```javascript
+// User bookmarks a post
+const currentUser = await db.auth.getUser();
+const bookmarks = currentUser.data.bookmarked_posts || [];
+
+await db.auth.updateUser({
+  data: {
+    bookmarked_posts: [...bookmarks, 'post_123']
+  }
+});
+
+// Remove bookmark
+await db.auth.updateUser({
+  data: {
+    bookmarked_posts: bookmarks.filter(id => id !== 'post_123')
+  }
+});
+```
+</Tab>
+
+<Tab title="Dart">
+```dart
+// User bookmarks a post
+final currentUser = await db.auth.getUser();
+final bookmarks = List<String>.from(
+  currentUser.data['bookmarked_posts'] ?? []
+);
+
+await db.auth.updateUser({
+  'data': {
+    'bookmarked_posts': [...bookmarks, 'post_123'],
+  }
+});
+
+// Remove bookmark
+await db.auth.updateUser({
+  'data': {
+    'bookmarked_posts': bookmarks.where((id) => id != 'post_123').toList(),
+  }
+});
+```
+</Tab>
+
+<Tab title="Go">
+```go
+// Update user bookmarks
+updates := map[string]interface{}{
+    "data": map[string]interface{}{
+        "bookmarked_posts": []string{"post_123", "post_456"},
+    },
+}
+
+_, err := client.UpdateUser(ctx, updates)
+```
+</Tab>
+
+<Tab title="Python">
+```python
+# User bookmarks a post
+user_response = requests.get(
+    f'{BASE_URL}/auth-collections/user',
+    headers=auth_headers
+)
+current_user = user_response.json()
+
+bookmarks = current_user.get('data', {}).get('bookmarked_posts', [])
+new_bookmarks = bookmarks + ['post_123']
+
+requests.patch(
+    f'{BASE_URL}/auth-collections/user',
+    headers=auth_headers,
+    json={'data': {'bookmarked_posts': new_bookmarks}}
+)
+```
+</Tab>
+
+<Tab title="HTTP">
+```bash
+# User bookmarks a post
+curl -X PATCH https://api.cocobase.buzz/auth-collections/user \
+  -H "Authorization: Bearer YOUR_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "data": {
+      "bookmarked_posts": ["post_123", "post_456", "post_789"]
+    }
+  }'
+```
+</Tab>
+</Tabs>
+
+### Document to Document
+
+<Tabs>
+<Tab title="JavaScript">
+```javascript
+// Create a post
+const post = await db.createDocument('posts', {
+  title: 'My first post',
+  content: 'Hello world!',
+  author_id: 'user_123'
+});
+
+// Create a comment on the post
+const comment = await db.createDocument('comments', {
+  post_id: post.id,
+  author_id: 'user_456',
+  text: 'Great post!',
+  created_at: new Date().toISOString()
+});
+```
+</Tab>
+
+<Tab title="Dart">
+```dart
+// Create a post
+final post = await db.createDocument('posts', {
+  'title': 'My first post',
+  'content': 'Hello world!',
+  'author_id': 'user_123',
+});
+
+// Create a comment on the post
+final comment = await db.createDocument('comments', {
+  'post_id': post.id,
+  'author_id': 'user_456',
+  'text': 'Great post!',
+  'created_at': DateTime.now().toIso8601String(),
+});
+```
+</Tab>
+
+<Tab title="Go">
+```go
+// Create a post
+postData := map[string]interface{}{
+    "title":     "My first post",
+    "content":   "Hello world!",
+    "author_id": "user_123",
+}
+
+post, err := client.CreateDocument(ctx, "posts", postData)
+
+// Create a comment on the post
+commentData := map[string]interface{}{
+    "post_id":    post.ID,
+    "author_id":  "user_456",
+    "text":       "Great post!",
+    "created_at": time.Now().Format(time.RFC3339),
+}
+
+comment, err := client.CreateDocument(ctx, "comments", commentData)
+```
+</Tab>
+
+<Tab title="Python">
+```python
+# Create a post
+post_data = {
+    'title': 'My first post',
+    'content': 'Hello world!',
+    'author_id': 'user_123'
+}
+
+post_response = requests.post(
+    f'{BASE_URL}/collections/posts/documents',
+    headers=headers,
+    json=post_data
+)
+post = post_response.json()
+
+# Create a comment on the post
+comment_data = {
+    'post_id': post['id'],
+    'author_id': 'user_456',
+    'text': 'Great post!',
+    'created_at': datetime.utcnow().isoformat()
+}
+
+requests.post(
+    f'{BASE_URL}/collections/comments/documents',
+    headers=headers,
+    json=comment_data
+)
+```
+</Tab>
+
+<Tab title="HTTP">
+```bash
+# Create a post
+curl -X POST https://api.cocobase.buzz/collections/posts/documents \
+  -H "X-API-Key: your-api-key" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "title": "My first post",
+    "content": "Hello world!",
+    "author_id": "user_123"
+  }'
+
+# Create a comment (using post ID from response)
+curl -X POST https://api.cocobase.buzz/collections/comments/documents \
+  -H "X-API-Key: your-api-key" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "post_id": "doc_post123",
+    "author_id": "user_456",
+    "text": "Great post!"
+  }'
+```
+</Tab>
+</Tabs>
+
+---
+
+## Populating Relationships
+
+Automatically fetch related data instead of just IDs.
+
+### Basic Population
+
+<Tabs>
+<Tab title="JavaScript">
+```javascript
+// Without population (just IDs)
+const users = await db.listDocuments('users');
+console.log(users[0].data.referred_by); // "user_456"
+
+// With population (full data)
+const usersWithReferrer = await db.listDocuments('users', {
+  populate: ['referred_by']
+});
+console.log(usersWithReferrer[0].data.referred_by);
+// { id: "user_456", email: "alice@example.com", data: { username: "alice" } }
+```
+</Tab>
+
+<Tab title="Dart">
+```dart
+// Without population (just IDs)
+final users = await db.listDocuments('users');
+print(users[0].data['referred_by']); // "user_456"
+
+// With population (full data)
+final usersWithReferrer = await db.listDocuments('users',
+  queryBuilder: QueryBuilder().populate('referred_by')
+);
+print(usersWithReferrer[0].data['referred_by']);
+// { id: "user_456", email: "alice@example.com", data: { username: "alice" } }
+```
+</Tab>
+
+<Tab title="Go">
+```go
+// Basic query (just IDs)
+users, _ := client.ListDocuments(ctx, "users", nil)
+fmt.Printf("Referred by: %v\n", users[0].Data["referred_by"]) // "user_456"
+
+// With population (via URL parameter)
+// Note: Use HTTP endpoint with populate parameter
+// /collections/users/documents?populate=referred_by
+```
+</Tab>
+
+<Tab title="Python">
+```python
+# Without population (just IDs)
+users = requests.get(
+    f'{BASE_URL}/auth-collections/users',
+    headers=headers
+).json()
+print(users['data'][0]['data']['referred_by'])  # "user_456"
+
+# With population (full data)
+params = {'populate': 'referred_by'}
+users_with_referrer = requests.get(
+    f'{BASE_URL}/auth-collections/users',
+    headers=headers,
+    params=params
+).json()
+print(users_with_referrer['data'][0]['data']['referred_by'])
+# { id: "user_456", email: "alice@example.com", data: { username: "alice" } }
+```
+</Tab>
+
+<Tab title="HTTP">
+```bash
+# Without population (just IDs)
+curl "https://api.cocobase.buzz/auth-collections/users" \
+  -H "X-API-Key: your-api-key"
+
+# With population (full data)
+curl "https://api.cocobase.buzz/auth-collections/users?populate=referred_by" \
+  -H "X-API-Key: your-api-key"
+```
+</Tab>
+</Tabs>
+
+### Populate Multiple Fields
+
+<Tabs>
+<Tab title="JavaScript">
+```javascript
+const users = await db.listDocuments('users', {
+  populate: ['referred_by', 'followers_ids', 'following_ids']
+});
+
+console.log(users[0].data.referred_by); // Full user object
+console.log(users[0].data.followers_ids); // Array of full user objects
+console.log(users[0].data.following_ids); // Array of full user objects
+```
+</Tab>
+
+<Tab title="Dart">
+```dart
+final users = await db.listDocuments('users',
+  queryBuilder: QueryBuilder().populateAll(['referred_by', 'followers_ids', 'following_ids'])
+);
+
+print(users[0].data['referred_by']); // Full user object
+print(users[0].data['followers_ids']); // Array of full user objects
+print(users[0].data['following_ids']); // Array of full user objects
+```
+</Tab>
+
+<Tab title="Go">
+```go
+// Use HTTP endpoint with multiple populate parameters
+// /collections/users/documents?populate=referred_by&populate=followers_ids&populate=following_ids
+```
+</Tab>
+
+<Tab title="Python">
+```python
+# Multiple populate parameters
+params = {
+    'populate': ['referred_by', 'followers_ids', 'following_ids']
+}
+
+users = requests.get(
+    f'{BASE_URL}/auth-collections/users',
+    headers=headers,
+    params=params
+).json()
+
+print(users['data'][0]['data']['referred_by'])  # Full user object
+print(users['data'][0]['data']['followers_ids'])  # Array of full user objects
+```
+</Tab>
+
+<Tab title="HTTP">
+```bash
+# Populate multiple fields
+curl "https://api.cocobase.buzz/auth-collections/users?populate=referred_by&populate=followers_ids&populate=following_ids" \
+  -H "X-API-Key: your-api-key"
+```
+</Tab>
+</Tabs>
+
+### Explicit Source Specification
+
+Force population from specific collections or AppUser model.
+
+<Tabs>
+<Tab title="JavaScript">
+```javascript
+// Force fetch from AppUser model
+const posts = await db.listDocuments('posts', {
+  populate: ['author:appuser']
+});
+
+// Force fetch from specific collection
+const projects = await db.listDocuments('projects', {
+  populate: ['owner:team_members']
+});
+```
+</Tab>
+
+<Tab title="Dart">
+```dart
+// Force fetch from AppUser model
+final posts = await db.listDocuments('posts',
+  queryBuilder: QueryBuilder().populate('author:appuser')
+);
+
+// Force fetch from specific collection
+final projects = await db.listDocuments('projects',
+  queryBuilder: QueryBuilder().populate('owner:team_members')
+);
+```
+</Tab>
+
+<Tab title="Go">
+```go
+// Use HTTP endpoint with explicit source
+// /collections/posts/documents?populate=author:appuser
+// /collections/projects/documents?populate=owner:team_members
+```
+</Tab>
+
+<Tab title="Python">
+```python
+# Force fetch from AppUser model
+params = {'populate': 'author:appuser'}
+posts = requests.get(
+    f'{BASE_URL}/collections/posts/documents',
+    headers=headers,
+    params=params
+).json()
+
+# Force fetch from specific collection
+params = {'populate': 'owner:team_members'}
+projects = requests.get(
+    f'{BASE_URL}/collections/projects/documents',
+    headers=headers,
+    params=params
+).json()
+```
+</Tab>
+
+<Tab title="HTTP">
+```bash
+# Force fetch from AppUser model
+curl "https://api.cocobase.buzz/collections/posts/documents?populate=author:appuser" \
+  -H "X-API-Key: your-api-key"
+
+# Force fetch from specific collection
+curl "https://api.cocobase.buzz/collections/projects/documents?populate=owner:team_members" \
+  -H "X-API-Key: your-api-key"
+```
+</Tab>
+</Tabs>
+
+---
+
+## Social Features
+
+### Follow System
+
+<Tabs>
+<Tab title="JavaScript">
+```javascript
+class FollowSystem {
+  constructor(db, token) {
+    this.db = db;
+    this.token = token;
+  }
+
+  async follow(userIdToFollow) {
+    const currentUser = await this.db.auth.getUser();
+    const following = currentUser.data.following_ids || [];
+
+    if (following.includes(userIdToFollow)) {
+      console.log('Already following');
+      return;
+    }
+
+    await this.db.auth.updateUser({
+      data: {
+        following_ids: [...following, userIdToFollow]
+      }
+    });
+  }
+
+  async unfollow(userIdToUnfollow) {
+    const currentUser = await this.db.auth.getUser();
+    const following = currentUser.data.following_ids || [];
+
+    await this.db.auth.updateUser({
+      data: {
+        following_ids: following.filter(id => id !== userIdToUnfollow)
+      }
+    });
+  }
+
+  async getFollowers(userId) {
+    const response = await this.db.listDocuments('users', {
+      filters: { id: userId },
+      populate: ['followers_ids']
+    });
+
+    return response[0]?.data.followers_ids || [];
+  }
+
+  async getFollowing(userId) {
+    const response = await this.db.listDocuments('users', {
+      filters: { id: userId },
+      populate: ['following_ids']
+    });
+
+    return response[0]?.data.following_ids || [];
+  }
+}
+
+// Usage
+const followSystem = new FollowSystem(db, userToken);
+await followSystem.follow('user_456');
+const followers = await followSystem.getFollowers('user_123');
+```
+</Tab>
+
+<Tab title="Dart">
+```dart
+class FollowSystem {
+  final Cocobase db;
+
+  FollowSystem(this.db);
+
+  Future<void> follow(String userIdToFollow) async {
+    final currentUser = await db.auth.getUser();
+    final following = List<String>.from(
+      currentUser.data['following_ids'] ?? []
+    );
+
+    if (following.contains(userIdToFollow)) {
+      print('Already following');
+      return;
+    }
+
+    await db.auth.updateUser({
+      'data': {
+        'following_ids': [...following, userIdToFollow],
+      }
+    });
+  }
+
+  Future<void> unfollow(String userIdToUnfollow) async {
+    final currentUser = await db.auth.getUser();
+    final following = List<String>.from(
+      currentUser.data['following_ids'] ?? []
+    );
+
+    await db.auth.updateUser({
+      'data': {
+        'following_ids': following.where((id) => id != userIdToUnfollow).toList(),
+      }
+    });
+  }
+
+  Future<List<dynamic>> getFollowers(String userId) async {
+    final users = await db.listDocuments('users',
+      queryBuilder: QueryBuilder()
+        .where('id', userId)
+        .populate('followers_ids')
+    );
+
+    return users.first.data['followers_ids'] ?? [];
+  }
+
+  Future<List<dynamic>> getFollowing(String userId) async {
+    final users = await db.listDocuments('users',
+      queryBuilder: QueryBuilder()
+        .where('id', userId)
+        .populate('following_ids')
+    );
+
+    return users.first.data['following_ids'] ?? [];
+  }
+}
+
+// Usage
+final followSystem = FollowSystem(db);
+await followSystem.follow('user_456');
+final followers = await followSystem.getFollowers('user_123');
+```
+</Tab>
+
+<Tab title="Go">
+```go
+type FollowSystem struct {
+    client *cocobase.Client
+}
+
+func NewFollowSystem(client *cocobase.Client) *FollowSystem {
+    return &FollowSystem{client: client}
+}
+
+func (f *FollowSystem) Follow(ctx context.Context, userIDToFollow string) error {
+    // Get current user
+    currentUser, err := f.client.GetCurrentUser(ctx)
+    if err != nil {
+        return err
+    }
+
+    // Get current following list
+    following := []string{}
+    if followingData, ok := currentUser.Data["following_ids"].([]interface{}); ok {
+        for _, id := range followingData {
+            if idStr, ok := id.(string); ok {
+                following = append(following, idStr)
+            }
+        }
+    }
+
+    // Check if already following
+    for _, id := range following {
+        if id == userIDToFollow {
+            fmt.Println("Already following")
+            return nil
+        }
+    }
+
+    // Add to following list
+    following = append(following, userIDToFollow)
+
+    // Update user
+    updates := map[string]interface{}{
+        "data": map[string]interface{}{
+            "following_ids": following,
+        },
+    }
+
+    _, err = f.client.UpdateUser(ctx, updates)
+    return err
+}
+
+func (f *FollowSystem) Unfollow(ctx context.Context, userIDToUnfollow string) error {
+    currentUser, err := f.client.GetCurrentUser(ctx)
+    if err != nil {
+        return err
+    }
+
+    following := []string{}
+    if followingData, ok := currentUser.Data["following_ids"].([]interface{}); ok {
+        for _, id := range followingData {
+            if idStr, ok := id.(string); ok {
+                if idStr != userIDToUnfollow {
+                    following = append(following, idStr)
+                }
+            }
+        }
+    }
+
+    updates := map[string]interface{}{
+        "data": map[string]interface{}{
+            "following_ids": following,
+        },
+    }
+
+    _, err = f.client.UpdateUser(ctx, updates)
+    return err
+}
+
+// Usage
+followSystem := NewFollowSystem(client)
+err := followSystem.Follow(ctx, "user_456")
+```
+</Tab>
+
+<Tab title="Python">
+```python
+class FollowSystem:
+    def __init__(self, api_key, token):
+        self.api_key = api_key
+        self.token = token
+        self.headers = {
+            'Authorization': f'Bearer {token}',
+            'Content-Type': 'application/json'
+        }
+
+    def follow(self, user_id_to_follow):
+        # Get current user
+        response = requests.get(
+            f'{BASE_URL}/auth-collections/user',
+            headers=self.headers
+        )
+        current_user = response.json()
+
+        following = current_user.get('data', {}).get('following_ids', [])
+
+        if user_id_to_follow in following:
+            print('Already following')
+            return
+
+        new_following = following + [user_id_to_follow]
+
+        requests.patch(
+            f'{BASE_URL}/auth-collections/user',
+            headers=self.headers,
+            json={'data': {'following_ids': new_following}}
+        )
+
+    def unfollow(self, user_id_to_unfollow):
+        response = requests.get(
+            f'{BASE_URL}/auth-collections/user',
+            headers=self.headers
+        )
+        current_user = response.json()
+
+        following = current_user.get('data', {}).get('following_ids', [])
+        new_following = [id for id in following if id != user_id_to_unfollow]
+
+        requests.patch(
+            f'{BASE_URL}/auth-collections/user',
+            headers=self.headers,
+            json={'data': {'following_ids': new_following}}
+        )
+
+    def get_followers(self, user_id):
+        params = {'populate': 'followers_ids'}
+        response = requests.get(
+            f'{BASE_URL}/auth-collections/users/{user_id}',
+            headers={'X-API-Key': self.api_key},
+            params=params
+        )
+        user = response.json()
+        return user.get('data', {}).get('followers_ids', [])
+
+# Usage
+follow_system = FollowSystem('your-api-key', user_token)
+follow_system.follow('user_456')
+followers = follow_system.get_followers('user_123')
+```
+</Tab>
+
+<Tab title="HTTP">
+```bash
+# Follow a user
+# First, get current user
+curl https://api.cocobase.buzz/auth-collections/user \
+  -H "Authorization: Bearer YOUR_TOKEN"
+
+# Update following list (add new user)
+curl -X PATCH https://api.cocobase.buzz/auth-collections/user \
+  -H "Authorization: Bearer YOUR_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "data": {
+      "following_ids": ["user_456", "user_789", "user_new"]
+    }
+  }'
+
+# Get user with populated followers
+curl "https://api.cocobase.buzz/auth-collections/users/user_123?populate=followers_ids" \
+  -H "X-API-Key: your-api-key"
+```
+</Tab>
+</Tabs>
+
+### Referral System
+
+<Tabs>
+<Tab title="JavaScript">
+```javascript
+async function getReferralStats(db, userId) {
+  // Get the user who referred this user
+  const [user] = await db.listDocuments('users', {
+    filters: { id: userId },
+    populate: ['referred_by']
+  });
+
+  // Get all users this user referred
+  const referrals = await db.listDocuments('users', {
+    filters: { 'data.referred_by': userId }
+  });
+
+  return {
+    referredBy: user.data.referred_by,
+    referralCount: referrals.length,
+    referrals: referrals
+  };
+}
+
+// Usage
+const stats = await getReferralStats(db, 'user_123');
+console.log('Referred by:', stats.referredBy?.data?.username);
+console.log('Total referrals:', stats.referralCount);
+```
+</Tab>
+
+<Tab title="Dart">
+```dart
+Future<Map<String, dynamic>> getReferralStats(Cocobase db, String userId) async {
+  // Get the user who referred this user
+  final users = await db.listDocuments('users',
+    queryBuilder: QueryBuilder()
+      .where('id', userId)
+      .populate('referred_by')
+  );
+  final user = users.first;
+
+  // Get all users this user referred
+  final referrals = await db.listDocuments('users', filters: {
+    'data.referred_by': userId,
+  });
+
+  return {
+    'referredBy': user.data['referred_by'],
+    'referralCount': referrals.length,
+    'referrals': referrals,
+  };
+}
+
+// Usage
+final stats = await getReferralStats(db, 'user_123');
+print('Referred by: ${stats['referredBy']?['data']?['username']}');
+print('Total referrals: ${stats['referralCount']}');
+```
+</Tab>
+
+<Tab title="Go">
+```go
+func getReferralStats(client *cocobase.Client, ctx context.Context, userID string) (map[string]interface{}, error) {
+    // Get the user who referred this user
+    query := cocobase.NewQuery().Where("id", userID)
+    users, err := client.ListDocuments(ctx, "users", query)
+    if err != nil || len(users) == 0 {
+        return nil, err
+    }
+    user := users[0]
+
+    // Get all users this user referred
+    query = cocobase.NewQuery().Where("data.referred_by", userID)
+    referrals, err := client.ListDocuments(ctx, "users", query)
+    if err != nil {
+        return nil, err
+    }
+
+    return map[string]interface{}{
+        "referredBy":    user.Data["referred_by"],
+        "referralCount": len(referrals),
+        "referrals":     referrals,
+    }, nil
+}
+
+// Usage
+stats, _ := getReferralStats(client, ctx, "user_123")
+fmt.Printf("Total referrals: %v\n", stats["referralCount"])
+```
+</Tab>
+
+<Tab title="Python">
+```python
+def get_referral_stats(api_key, user_id):
+    headers = {'X-API-Key': api_key}
+
+    # Get the user who referred this user
+    params = {'populate': 'referred_by'}
+    user_response = requests.get(
+        f'{BASE_URL}/auth-collections/users/{user_id}',
+        headers=headers,
+        params=params
+    )
+    user = user_response.json()
+
+    # Get all users this user referred
+    params = {'data.referred_by': user_id}
+    referrals_response = requests.get(
+        f'{BASE_URL}/auth-collections/users',
+        headers=headers,
+        params=params
+    )
+    referrals = referrals_response.json()
+
+    return {
+        'referredBy': user.get('data', {}).get('referred_by'),
+        'referralCount': referrals.get('total', 0),
+        'referrals': referrals.get('data', [])
+    }
+
+# Usage
+stats = get_referral_stats('your-api-key', 'user_123')
+print(f"Referred by: {stats['referredBy'].get('data', {}).get('username')}")
+print(f"Total referrals: {stats['referralCount']}")
+```
+</Tab>
+
+<Tab title="HTTP">
+```bash
+# Get user who referred this user
+curl "https://api.cocobase.buzz/auth-collections/users/user_123?populate=referred_by" \
+  -H "X-API-Key: your-api-key"
+
+# Get all users this user referred
+curl "https://api.cocobase.buzz/auth-collections/users?data.referred_by=user_123" \
+  -H "X-API-Key: your-api-key"
+```
+</Tab>
+</Tabs>
+
+---
+
+## Best Practices
+
+<AccordionGroup>
+<Accordion title="1. Use Batch Queries with Population">
+Population uses optimized batch queries to avoid N+1 problems.
+
+```javascript
+// ✓ Good: Single query with populate
+const users = await db.listDocuments('users', {
+  populate: ['followers_ids', 'following_ids']
+});
+
+// ✗ Bad: Multiple individual queries
+for (const user of users) {
+  const follower = await db.getDocument('users', user.data.followers_ids[0]);
+}
+```
+</Accordion>
+
+<Accordion title="2. Only Populate What You Need">
+Avoid over-populating to reduce response size and improve performance.
+
+```javascript
+// ✓ Good: Only populate what's needed
+const users = await db.listDocuments('users', {
+  populate: ['referred_by']
+});
+
+// ✗ Bad: Populating unnecessary relationships
+const users = await db.listDocuments('users', {
+  populate: ['followers_ids', 'following_ids', 'referred_by', 'friends_ids']
+});
+```
+</Accordion>
+
+<Accordion title="3. Keep Relationship Arrays Reasonable">
+Don't store thousands of IDs in a single array field.
+
+```javascript
+// ✓ Good: Reasonable array size (< 1000 items)
+followers_ids: ['user_1', 'user_2', ..., 'user_500']
+
+// ✗ Bad: Massive arrays (> 10,000 items)
+// Consider a separate junction collection for this
+```
+</Accordion>
+
+<Accordion title="4. Use Filters with Population">
+Combine filters and population for efficient queries.
+
+```javascript
+// ✓ Good: Filter and populate together
+const activeUsers = await db.listDocuments('users', {
+  filters: { status: 'active' },
+  populate: ['referred_by']
+});
+```
+</Accordion>
+
+<Accordion title="5. Cache Populated Results">
+Cache frequently accessed relationships to reduce API calls.
+
+```javascript
+const cache = new Map();
+
+async function getUserWithRelationships(userId, populate) {
+  const cacheKey = `${userId}:${populate.join(',')}`;
+
+  if (cache.has(cacheKey)) {
+    return cache.get(cacheKey);
+  }
+
+  const data = await db.getDocument('users', userId, { populate });
+  cache.set(cacheKey, data);
+
+  return data;
+}
+```
+</Accordion>
+</AccordionGroup>
+
+---
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="CRUD Operations" icon="database" href="/features/crud-operations">
+    Create and manage related documents
+  </Card>
+  <Card title="Query & Filtering" icon="filter" href="/features/querying">
+    Filter documents by relationships
+  </Card>
+  <Card title="Real-time Updates" icon="bolt" href="/features/realtime">
+    Watch relationship changes live
+  </Card>
+  <Card title="Authentication" icon="shield" href="/features/authentication">
+    Manage user relationships
+  </Card>
+</CardGroup>

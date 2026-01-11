@@ -1,0 +1,1020 @@
+---
+title: Troubleshooting
+description: Common issues, solutions, and debugging tips for CocoBase
+---
+
+# Troubleshooting
+
+Solutions to common problems and debugging techniques to get you back on track quickly.
+
+## Authentication Issues
+
+### Issue: "API key is invalid"
+
+**Symptoms:**
+
+```
+DioException: 401 Unauthorized - Invalid API key
+Error: API request failed (status: 401)
+```
+
+**Solutions:**
+
+1. **Verify API Key is Correct**
+
+   <Tabs>
+   <Tab title="Flutter">
+   ```dart
+   // Check your API key is correct
+   final config = CocobaseConfig(
+     apiKey: "YOUR_API_KEY_HERE",  // Copy from dashboard
+   );
+   ```
+   </Tab>
+
+   <Tab title="JavaScript">
+   ```javascript
+   const config = {
+     apiKey: "YOUR_API_KEY_HERE",  // Copy from dashboard
+   };
+   ```
+   </Tab>
+
+   <Tab title="Python">
+   ```python
+   # Cloud Functions
+   # Verify API key in dashboard settings
+   ```
+   </Tab>
+
+   <Tab title="Go">
+   ```go
+   config := cocobase.Config{
+       APIKey: "YOUR_API_KEY_HERE",  // Copy from dashboard
+   }
+   ```
+   </Tab>
+   </Tabs>
+
+2. **Check API Key Format**
+   - API keys are typically 32-64 characters
+   - Should be alphanumeric
+   - Don't add quotes or extra spaces
+
+3. **Verify API Key is Active**
+   - Go to CocoBase Dashboard
+   - Check if the API key is enabled
+   - Check expiration date
+
+4. **Use Environment Variables**
+
+   ```dart
+   // Better approach
+   const apiKey = String.fromEnvironment('COCOBASE_API_KEY');
+   final config = CocobaseConfig(apiKey: apiKey);
+   ```
+
+---
+
+### Issue: "User session expired"
+
+**Symptoms:**
+
+```
+DioException: 401 Unauthorized during request
+Session token invalid or expired
+```
+
+**Solutions:**
+
+1. **Implement Token Refresh**
+
+   ```dart
+   Future<T> withAutomaticRefresh<T>(
+     Future<T> Function() request,
+   ) async {
+     try {
+       return await request();
+     } on DioException catch (e) {
+       if (e.response?.statusCode == 401) {
+         // Token expired - ask user to login again
+         await db.logout();
+         throw Exception('Please login again');
+       }
+       rethrow;
+     }
+   }
+   ```
+
+2. **Check Token Storage**
+
+   ```dart
+   // Verify token is saved correctly
+   final isAuth = await db.isAuthenticated();
+   print('Authenticated: $isAuth');
+   ```
+
+3. **Clear Cache and Retry**
+
+   ```dart
+   // Force fresh login
+   await db.logout();
+   final result = await db.login(
+     email: 'user@example.com',
+     password: 'password',
+   );
+   ```
+
+---
+
+### Issue: "Email already registered"
+
+**Symptoms:**
+
+```
+DioException: 409 Conflict - Email already in use
+```
+
+**Solutions:**
+
+1. **Use Different Email**
+
+   ```dart
+   try {
+     await db.register(
+       email: 'newemail@example.com',
+       password: 'SecurePassword123!',
+     );
+   } on DioException catch (e) {
+     if (e.response?.statusCode == 409) {
+       print('Email already registered - try another');
+     }
+   }
+   ```
+
+2. **Implement Password Reset Flow**
+
+   Instead of creating a new account, direct users to password reset.
+
+---
+
+## Connection Problems
+
+### Issue: "Network timeout"
+
+**Symptoms:**
+
+```
+DioException: Connection timeout after 30000ms
+SocketException: Failed to connect
+```
+
+**Solutions:**
+
+1. **Check Internet Connection**
+
+   ```dart
+   import 'package:connectivity_plus/connectivity_plus.dart';
+
+   Future<bool> hasInternet() async {
+     final connectivity = await Connectivity().checkConnectivity();
+     return connectivity != ConnectivityResult.none;
+   }
+   ```
+
+2. **Implement Retry Logic**
+
+   ```dart
+   Future<T> withRetry<T>(
+     Future<T> Function() request, {
+     int maxAttempts = 3,
+   }) async {
+     for (int i = 0; i < maxAttempts; i++) {
+       try {
+         return await request();
+       } catch (e) {
+         if (i == maxAttempts - 1) rethrow;
+         await Future.delayed(Duration(seconds: 2 << i));  // Exponential backoff
+       }
+     }
+     throw Exception('Max retries exceeded');
+   }
+
+   // Use it
+   final books = await withRetry(() => db.listDocuments<Book>("books"));
+   ```
+
+3. **Increase Timeout (if needed)**
+
+   ```javascript
+   const config = {
+     apiKey: 'YOUR_KEY',
+     timeout: 60000,  // 60 seconds
+   };
+   ```
+
+---
+
+### Issue: "Certificate verification failed"
+
+**Symptoms:**
+
+```
+HandshakeException: Handshake error in client
+Certificate verification failed
+```
+
+**Solutions:**
+
+1. **Ensure Using HTTPS**
+
+   ```dart
+   final config = CocobaseConfig(
+     apiKey: 'YOUR_KEY',
+     baseUrl: 'https://api.cocobase.buzz',  // Must be HTTPS
+   );
+   ```
+
+2. **Check Device Date/Time**
+   - SSL certificates are time-sensitive
+   - Ensure device date/time is correct
+
+3. **Update Dependencies**
+
+   ```bash
+   flutter pub upgrade
+   npm update
+   ```
+
+---
+
+## Query Issues
+
+### Issue: "No results when expecting data"
+
+**Common Causes & Solutions:**
+
+1. **Field Name Typo**
+
+   ```dart
+   // Wrong - typo in field name
+   final docs = await db.listDocuments("books", filters: {
+     'titulo': 'Flutter',  // Typo!
+   });
+
+   // Correct
+   final docs = await db.listDocuments("books", filters: {
+     'title': 'Flutter',
+   });
+   ```
+
+2. **Case Sensitivity**
+
+   Field names are case-sensitive! Match the exact case from your database schema.
+
+3. **Operator Missing**
+
+   ```dart
+   // Wrong - looking for exact price
+   final docs = await db.listDocuments("books", filters: {
+     'price': 29.99,  // Exact match only
+   });
+
+   // Correct - use operators
+   final docs = await db.listDocuments("books", filters: {
+     'price__gte': 20,
+     'price__lte': 50,
+   });
+   ```
+
+4. **Wrong Data Type**
+
+   ```dart
+   // Wrong - comparing string to number
+   final docs = await db.listDocuments("books", filters: {
+     'price': '29.99',  // String!
+   });
+
+   // Correct - use correct type
+   final docs = await db.listDocuments("books", filters: {
+     'price': 29.99,  // Number
+   });
+   ```
+
+---
+
+### Issue: "QueryBuilder not building correct query"
+
+**Debug with `.build()`:**
+
+```dart
+final query = QueryBuilder()
+  .where('status', 'published')
+  .whereGreaterThan('price', 20)
+  .limit(10);
+
+// Check what query is generated
+print('Query: ${query.build()}');
+// Output: status=published&price__gt=20&limit=10
+```
+
+---
+
+### Issue: "Pagination not working"
+
+**Common Mistakes:**
+
+```dart
+// Wrong - not using offset
+final docs = await db.listDocuments("books", filters: {
+  'limit': 20,
+  'limit': 40,  // Second limit overwrites first!
+});
+
+// Correct - use offset for pages
+final page1 = await db.listDocuments("books", filters: {
+  'limit': 20,
+  'offset': 0,
+});
+
+final page2 = await db.listDocuments("books", filters: {
+  'limit': 20,
+  'offset': 20,
+});
+```
+
+---
+
+## Type Conversion Errors
+
+### Issue: "type '_InternalLinkedHashMap<String, dynamic>' is not a subtype"
+
+**Cause:** Type mismatch in `fromJson()` method
+
+```dart
+// Wrong - assuming wrong type
+factory Book.fromJson(Map<String, dynamic> json) {
+  return Book(
+    price: json['price'] as String,  // API returns number!
+  );
+}
+
+// Correct - match actual type
+factory Book.fromJson(Map<String, dynamic> json) {
+  return Book(
+    price: (json['price'] as num).toDouble(),  // Convert properly
+  );
+}
+```
+
+**Fix Strategy:**
+
+```dart
+// 1. Check what type the API actually returns
+final doc = await db.getDocument("books", "doc-id");
+print(doc.data.runtimeType);  // Check actual type
+print(doc.data);              // Print the data
+
+// 2. Update your fromJson to match
+factory Book.fromJson(Map<String, dynamic> json) {
+  return Book(
+    price: _parsePrice(json['price']),  // Use helper
+  );
+}
+
+static double _parsePrice(dynamic value) {
+  if (value is num) return value.toDouble();
+  if (value is String) return double.parse(value);
+  return 0.0;
+}
+```
+
+---
+
+### Issue: "NoSuchMethodError: The method 'fromJson' was called on null"
+
+**Cause:** Converter not registered
+
+```dart
+// Wrong - forgot to register
+final books = await db.listDocuments<Book>("books");
+
+// Correct - register first
+CocobaseConverters.register<Book>(Book.fromJson);
+final books = await db.listDocuments<Book>("books");
+
+// Or pass explicit converter
+final books = await db.listDocuments<Book>(
+  "books",
+  converter: Book.fromJson,
+);
+```
+
+---
+
+### Issue: "null value error when accessing optional field"
+
+**Cause:** Not handling null values
+
+```dart
+// Wrong - force unwrap optional
+final subtitle = json['subtitle'] as String;  // Crashes if null!
+
+// Correct - handle null
+final subtitle = json['subtitle'] as String?;  // Nullable
+
+// Or with default
+final subtitle = (json['subtitle'] as String?) ?? 'No subtitle';
+```
+
+---
+
+## Real-Time Connection Problems
+
+### Issue: "WebSocket connection fails"
+
+**Solutions:**
+
+1. **Verify Collection Exists**
+
+   ```dart
+   // Check collection exists before watching
+   try {
+     final collection = await db.getCollection('books');
+     await db.watchCollection('books', (event) {
+       print('Event: ${event.type}');
+     });
+   } catch (e) {
+     print('Collection error: $e');
+   }
+   ```
+
+2. **Check WebSocket is Enabled**
+
+   Most BaaS platforms enable WebSocket by default. Verify in your project settings.
+
+3. **Use Correct Filters**
+
+   ```dart
+   // Correct - use filters parameter
+   await db.watchCollection('books', callback,
+     filters: {'status': 'published'},
+   );
+   ```
+
+---
+
+### Issue: "Real-time updates stopped"
+
+**Solutions:**
+
+1. **Reconnect on Disconnect**
+
+   ```dart
+   class RobustWatcher {
+     Future<void> watch(String collection) async {
+       try {
+         await db.watchCollection(collection, (event) {
+           // Handle event
+         });
+       } catch (e) {
+         print('Watch failed: $e');
+         // Reconnect after delay
+         await Future.delayed(Duration(seconds: 5));
+         await watch(collection);  // Retry
+       }
+     }
+   }
+   ```
+
+2. **Check Network State**
+
+   ```dart
+   Future<void> watchWithNetworkCheck(String collection) async {
+     if (await hasInternet()) {
+       await db.watchCollection(collection, (event) {
+         // Handle event
+       });
+     } else {
+       print('No internet connection');
+     }
+   }
+   ```
+
+---
+
+## File Upload Errors
+
+### Issue: "File upload fails"
+
+**Common Causes:**
+
+1. **File Too Large**
+
+   ```dart
+   // Check file size before upload
+   final file = File(path);
+   final fileSize = await file.length();
+   final maxSize = 10 * 1024 * 1024;  // 10MB
+
+   if (fileSize > maxSize) {
+     throw Exception('File too large (max 10MB)');
+   }
+   ```
+
+2. **Invalid File Type**
+
+   ```dart
+   // Validate file extension
+   final allowedExtensions = ['.jpg', '.jpeg', '.png', '.pdf'];
+   final extension = path.substring(path.lastIndexOf('.'));
+
+   if (!allowedExtensions.contains(extension.toLowerCase())) {
+     throw Exception('Invalid file type');
+   }
+   ```
+
+3. **Network Timeout**
+
+   ```dart
+   // Increase timeout for large files
+   final config = CocobaseConfig(
+     apiKey: apiKey,
+     timeout: Duration(minutes: 5),  // 5 minute timeout
+   );
+   ```
+
+---
+
+## Performance Issues
+
+### Issue: "App is slow when loading many documents"
+
+**Solutions:**
+
+1. **Use Pagination**
+
+   ```dart
+   // Wrong - load everything at once
+   final docs = await db.listDocuments("books");
+
+   // Correct - paginate
+   final docs = await db.listDocuments("books", filters: {
+     'limit': 50,
+     'offset': 0,
+   });
+   ```
+
+2. **Select Only Needed Fields**
+
+   ```dart
+   // Wrong - fetch all fields
+   final docs = await db.listDocuments("books");
+
+   // Correct - select specific fields
+   final docs = await db.listDocuments("books",
+     queryBuilder: QueryBuilder()
+       .select('id')
+       .select('title')
+       .select('price'),
+   );
+   ```
+
+3. **Use Indexes**
+
+   ```dart
+   // Wrong - querying non-indexed field
+   final docs = await db.listDocuments("books", filters: {
+     'description__contains': 'flutter',  // Slow!
+   });
+
+   // Correct - query indexed field
+   final docs = await db.listDocuments("books", filters: {
+     'status': 'published',  // Fast if indexed
+   });
+   ```
+
+---
+
+### Issue: "Memory usage increases over time"
+
+**Solutions:**
+
+1. **Clear Collections**
+
+   ```dart
+   class SafeCollectionWatch {
+     Future<void> watch(String collection) async {
+       final eventBuffer = <WatchEvent>[];
+
+       await db.watchCollection(collection, (event) {
+         eventBuffer.add(event);
+
+         // Process and clear buffer periodically
+         if (eventBuffer.length >= 100) {
+           _processBatch(eventBuffer);
+           eventBuffer.clear();
+         }
+       });
+     }
+   }
+   ```
+
+2. **Dispose Resources**
+
+   ```dart
+   @override
+   void dispose() {
+     db.closeConnection();  // Important!
+     super.dispose();
+   }
+   ```
+
+---
+
+## Cloud Functions Issues
+
+### Issue: "Function execution timeout"
+
+**Causes:**
+- Heavy computation
+- Database query taking too long
+- External API call delay
+
+**Solutions:**
+
+1. **Optimize Database Queries**
+
+   ```python
+   # Bad - no limit
+   posts = db.query("posts")
+
+   # Good - with limit
+   posts = db.query("posts", limit=100)
+   ```
+
+2. **Use Indexes**
+
+   ```python
+   # Query indexed fields for faster results
+   posts = db.query("posts",
+       status="published",  # Indexed
+       author_id=user_id,   # Indexed
+       limit=50
+   )
+   ```
+
+3. **Implement Caching**
+
+   ```python
+   def main():
+       # Check cache first
+       cache_key = f"stats_{datetime.now().date()}"
+       cached = db.find_one("cache", key=cache_key)
+
+       if cached:
+           return cached['data']
+
+       # Calculate stats (expensive)
+       stats = calculate_stats()
+
+       # Store in cache
+       db.create_document("cache", {
+           "key": cache_key,
+           "data": stats,
+           "expires_at": (datetime.now() + timedelta(hours=24)).isoformat()
+       })
+
+       return stats
+   ```
+
+---
+
+### Issue: "Function returns unexpected errors"
+
+**Debug Steps:**
+
+1. **Enable Logging**
+
+   ```python
+   def main():
+       try:
+           print(f"Request method: {req.method}")
+           print(f"Request data: {req.json()}")
+
+           result = process_data()
+
+           print(f"Result: {result}")
+           return {"result": result}
+
+       except Exception as e:
+           print(f"Error: {str(e)}")
+           import traceback
+           traceback.print_exc()
+           return {"error": str(e)}, 500
+   ```
+
+2. **Validate Input**
+
+   ```python
+   def main():
+       user_id = req.get("user_id")
+
+       if not user_id:
+           return {"error": "user_id is required"}, 400
+
+       # Continue processing
+   ```
+
+3. **Test Locally**
+
+   Create a test script with sample data to debug your function logic.
+
+---
+
+## Debugging Tips
+
+### Enable Debug Logging
+
+<Tabs>
+<Tab title="Flutter">
+```dart
+import 'package:dio/dio.dart';
+
+final dio = Dio();
+dio.interceptors.add(
+  LogInterceptor(
+    requestBody: true,
+    responseBody: true,
+    requestHeader: true,
+    responseHeader: true,
+  ),
+);
+```
+</Tab>
+
+<Tab title="JavaScript">
+```javascript
+// Enable axios logging
+axios.interceptors.request.use(request => {
+  console.log('Starting Request', request);
+  return request;
+});
+
+axios.interceptors.response.use(response => {
+  console.log('Response:', response);
+  return response;
+});
+```
+</Tab>
+
+<Tab title="Go">
+```go
+// Enable HTTP request logging
+client := cocobase.NewClient(cocobase.Config{
+    APIKey: apiKey,
+    Debug:  true,  // Enable debug mode
+})
+```
+</Tab>
+</Tabs>
+
+### Print Document Details
+
+```dart
+final doc = await db.getDocument("books", "doc-id");
+print('ID: ${doc.id}');
+print('Collection: ${doc.collection}');
+print('Data: ${doc.data}');
+print('Data type: ${doc.data.runtimeType}');
+print('Created: ${doc.createdAt}');
+print('Updated: ${doc.updatedAt}');
+```
+
+### Check Query String
+
+```dart
+final query = QueryBuilder()
+  .where('status', 'published')
+  .whereGreaterThan('price', 20);
+
+print('Query: ${query.build()}');
+```
+
+### Test in Isolation
+
+Create minimal reproduction cases:
+
+```dart
+void main() async {
+  final db = Cocobase(CocobaseConfig(apiKey: 'test-key'));
+
+  // Minimal test case
+  try {
+    final result = await db.listDocuments('books');
+    print('Success: ${result.length} books');
+  } catch (e) {
+    print('Error: $e');
+  }
+}
+```
+
+---
+
+## Common Error Messages
+
+### "Collection not found"
+
+**Solution:** Create the collection first or check spelling.
+
+```dart
+// Create collection
+await db.createCollection(Collection(name: 'books'));
+
+// Then query
+final books = await db.listDocuments('books');
+```
+
+---
+
+### "Invalid filter operator"
+
+**Solution:** Check operator syntax.
+
+```dart
+// Wrong
+'price_greater': 20
+
+// Correct
+'price__gt': 20  // Double underscore
+```
+
+---
+
+### "Document not found"
+
+**Solution:** Verify document ID exists.
+
+```dart
+// Check if document exists first
+final exists = await db.documentExists('books', docId);
+if (exists) {
+  final doc = await db.getDocument('books', docId);
+}
+```
+
+---
+
+### "Validation failed"
+
+**Solution:** Check required fields and data types.
+
+```dart
+// Ensure all required fields are present
+final data = {
+  'title': 'Book Title',        // Required
+  'author': 'Author Name',      // Required
+  'price': 29.99,               // Required, must be number
+  'isbn': '978-0-123456-78-9',  // Optional
+};
+
+await db.createDocument('books', data);
+```
+
+---
+
+## FAQ
+
+### Q: How do I reset my API key?
+
+**A:** Go to your CocoBase Dashboard → Settings → API Keys → Generate New Key. Update your application with the new key before revoking the old one.
+
+---
+
+### Q: Why are my queries slow?
+
+**A:** Common causes:
+- Missing indexes on queried fields
+- Fetching too many documents (use pagination)
+- Populating too many relationships
+- Not using query operators efficiently
+
+See [Query Optimization](/guides/best-practices#query-optimization) for solutions.
+
+---
+
+### Q: How do I handle rate limiting?
+
+**A:** Implement retry logic with exponential backoff. See [Rate Limiting](/guides/best-practices#rate-limiting) for examples.
+
+---
+
+### Q: Can I use raw SQL queries?
+
+**A:** In cloud functions, you can use `db.execute_raw_query()` but be careful with SQL injection. Always use parameterized queries.
+
+---
+
+### Q: How do I backup my data?
+
+**A:** Use the export functionality or create a cloud function that periodically exports data to cloud storage.
+
+```python
+def backup_data():
+    # Get all documents
+    docs = db.query("collection", limit=10000)
+
+    # Save to file or cloud storage
+    import json
+    backup = json.dumps(docs["data"])
+
+    return {"backed_up": len(docs["data"])}
+```
+
+---
+
+### Q: Why isn't my converter working?
+
+**A:** Make sure you:
+1. Registered the converter: `CocobaseConverters.register<Book>(Book.fromJson)`
+2. Used the correct type parameter: `db.listDocuments<Book>("books")`
+3. Defined `fromJson()` factory method correctly
+
+---
+
+## Getting Help
+
+### Resources
+
+1. **Documentation**
+   - [Getting Started](/guides/getting-started)
+   - [Features](/features/crud-operations)
+   - [Best Practices](/guides/best-practices)
+
+2. **Community**
+   - GitHub Issues: [cocobase/issues](https://github.com/cocobase/issues)
+   - Stack Overflow: Tag questions with `cocobase`
+   - Discord: [Join our community](https://discord.gg/cocobase)
+
+3. **Contact Support**
+   - Email: support@cocobase.buzz
+   - Dashboard: Help button in top-right corner
+   - Live Chat: Available during business hours
+
+### Reporting Issues
+
+When reporting a bug, include:
+
+```dart
+// 1. SDK version
+print('CocoBase SDK version: 1.0.0');
+
+// 2. Platform version
+// Dart --version
+// Flutter --version
+// Node --version
+
+// 3. Minimal reproduction
+final db = Cocobase(CocobaseConfig(apiKey: 'test-key'));
+final books = await db.listDocuments("books");
+
+// 4. Full error message and stack trace
+// (Copy from console)
+
+// 5. Expected vs actual behavior
+// Expected: List of 10 books
+// Actual: Empty array
+```
+
+### Before Asking for Help
+
+1. Check this troubleshooting guide
+2. Review the [documentation](/guides/getting-started)
+3. Search existing GitHub issues
+4. Try a minimal reproduction
+5. Check your API key and network connection
+
+---
+
+## Error Code Reference
+
+| Code | Meaning | Common Cause |
+|------|---------|--------------|
+| 400 | Bad Request | Invalid data format, missing required fields |
+| 401 | Unauthorized | Invalid API key, expired session |
+| 403 | Forbidden | Insufficient permissions |
+| 404 | Not Found | Resource doesn't exist |
+| 409 | Conflict | Duplicate entry (e.g., email already exists) |
+| 429 | Too Many Requests | Rate limit exceeded |
+| 500 | Internal Server Error | Server-side error |
+| 502 | Bad Gateway | Temporary server issue |
+| 503 | Service Unavailable | Server maintenance or overload |
+
+---
+
+## Next Steps
+
+- **[Best Practices](/guides/best-practices)** - Optimize your code
+- **[Examples](/examples)** - Learn from real-world code
+- **[Cloud Functions](/features/cloud-functions)** - Build serverless functions
+- **[Advanced Features](/features/advanced)** - Master advanced techniques

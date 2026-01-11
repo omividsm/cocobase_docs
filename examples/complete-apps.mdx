@@ -1,0 +1,1187 @@
+---
+title: Complete App Examples
+description: Full-featured application examples built with Cocobase
+icon: code
+---
+
+# Complete Application Examples
+
+Learn by building! These complete application examples show you how to build real-world apps with Cocobase.
+
+## Todo Application
+
+A simple yet complete todo app with authentication, CRUD operations, and real-time sync.
+
+### Features
+- User authentication
+- Create, read, update, delete todos
+- Mark todos as complete
+- Real-time sync across devices
+- Filter by status
+
+<Tabs>
+  <Tab title="JavaScript/React">
+    ```typescript
+    // lib/cocobase.ts
+    import { Cocobase } from "cocobase";
+
+    export const db = new Cocobase({
+      apiKey: process.env.NEXT_PUBLIC_COCOBASE_API_KEY!,
+    });
+
+    // types/todo.ts
+    export interface Todo {
+      _id: string;
+      title: string;
+      completed: boolean;
+      userId: string;
+      createdAt: string;
+    }
+
+    // hooks/useTodos.ts
+    import { useState, useEffect } from 'react';
+    import { db } from '@/lib/cocobase';
+    import type { Todo } from '@/types/todo';
+
+    export function useTodos() {
+      const [todos, setTodos] = useState<Todo[]>([]);
+      const [loading, setLoading] = useState(true);
+
+      useEffect(() => {
+        loadTodos();
+
+        // Real-time subscription
+        const unsubscribe = db.watch('todos', (event) => {
+          if (event.type === 'create') {
+            setTodos(prev => [...prev, event.data as Todo]);
+          } else if (event.type === 'update') {
+            setTodos(prev => prev.map(t =>
+              t._id === event.data._id ? event.data as Todo : t
+            ));
+          } else if (event.type === 'delete') {
+            setTodos(prev => prev.filter(t => t._id !== event.documentId));
+          }
+        });
+
+        return () => unsubscribe();
+      }, []);
+
+      const loadTodos = async () => {
+        try {
+          const data = await db.listDocuments<Todo>('todos', {
+            sort: { createdAt: -1 }
+          });
+          setTodos(data);
+        } finally {
+          setLoading(false);
+        }
+      };
+
+      const addTodo = async (title: string) => {
+        const todo = await db.createDocument<Todo>('todos', {
+          title,
+          completed: false,
+          userId: db.auth.getCurrentUser()?._id,
+        });
+        return todo;
+      };
+
+      const toggleTodo = async (id: string, completed: boolean) => {
+        await db.updateDocument('todos', id, { completed });
+      };
+
+      const deleteTodo = async (id: string) => {
+        await db.deleteDocument('todos', id);
+      };
+
+      return { todos, loading, addTodo, toggleTodo, deleteTodo };
+    }
+
+    // components/TodoList.tsx
+    import { useTodos } from '@/hooks/useTodos';
+
+    export function TodoList() {
+      const { todos, loading, addTodo, toggleTodo, deleteTodo } = useTodos();
+      const [newTodo, setNewTodo] = useState('');
+
+      const handleSubmit = async (e: React.FormEvent) => {
+        e.preventDefault();
+        if (!newTodo.trim()) return;
+        await addTodo(newTodo);
+        setNewTodo('');
+      };
+
+      if (loading) return <div>Loading...</div>;
+
+      return (
+        <div>
+          <form onSubmit={handleSubmit}>
+            <input
+              value={newTodo}
+              onChange={(e) => setNewTodo(e.target.value)}
+              placeholder="What needs to be done?"
+            />
+            <button type="submit">Add</button>
+          </form>
+
+          <ul>
+            {todos.map(todo => (
+              <li key={todo._id}>
+                <input
+                  type="checkbox"
+                  checked={todo.completed}
+                  onChange={(e) => toggleTodo(todo._id, e.target.checked)}
+                />
+                <span style={{
+                  textDecoration: todo.completed ? 'line-through' : 'none'
+                }}>
+                  {todo.title}
+                </span>
+                <button onClick={() => deleteTodo(todo._id)}>Delete</button>
+              </li>
+            ))}
+          </ul>
+        </div>
+      );
+    }
+    ```
+  </Tab>
+
+  <Tab title="Flutter">
+    ```dart
+    // models/todo.dart
+    class Todo {
+      final String id;
+      final String title;
+      final bool completed;
+      final String userId;
+      final DateTime createdAt;
+
+      Todo({
+        required this.id,
+        required this.title,
+        required this.completed,
+        required this.userId,
+        required this.createdAt,
+      });
+
+      factory Todo.fromJson(Map<String, dynamic> json) {
+        return Todo(
+          id: json['_id'],
+          title: json['title'],
+          completed: json['completed'],
+          userId: json['userId'],
+          createdAt: DateTime.parse(json['createdAt']),
+        );
+      }
+
+      Map<String, dynamic> toJson() {
+        return {
+          'title': title,
+          'completed': completed,
+          'userId': userId,
+        };
+      }
+    }
+
+    // providers/todo_provider.dart
+    import 'package:flutter/foundation.dart';
+    import 'package:coco_base_flutter/coco_base_flutter.dart';
+
+    class TodoProvider with ChangeNotifier {
+      final Cocobase _db;
+      List<Todo> _todos = [];
+      bool _loading = true;
+      StreamSubscription? _subscription;
+
+      TodoProvider(this._db) {
+        _loadTodos();
+        _subscribeToChanges();
+      }
+
+      List<Todo> get todos => _todos;
+      bool get loading => _loading;
+
+      Future<void> _loadTodos() async {
+        try {
+          final data = await _db.listDocuments('todos',
+            sort: {'-createdAt': 1}
+          );
+          _todos = data.map((json) => Todo.fromJson(json)).toList();
+        } finally {
+          _loading = false;
+          notifyListeners();
+        }
+      }
+
+      void _subscribeToChanges() {
+        _subscription = _db.watch('todos').listen((event) {
+          if (event.type == 'create') {
+            _todos.add(Todo.fromJson(event.data));
+          } else if (event.type == 'update') {
+            final index = _todos.indexWhere((t) => t.id == event.data['_id']);
+            if (index != -1) {
+              _todos[index] = Todo.fromJson(event.data);
+            }
+          } else if (event.type == 'delete') {
+            _todos.removeWhere((t) => t.id == event.documentId);
+          }
+          notifyListeners();
+        });
+      }
+
+      Future<void> addTodo(String title) async {
+        await _db.createDocument('todos', {
+          'title': title,
+          'completed': false,
+          'userId': (await _db.getCurrentUser())?['_id'],
+        });
+      }
+
+      Future<void> toggleTodo(String id, bool completed) async {
+        await _db.updateDocument('todos', id, {'completed': completed});
+      }
+
+      Future<void> deleteTodo(String id) async {
+        await _db.deleteDocument('todos', id);
+      }
+
+      @override
+      void dispose() {
+        _subscription?.cancel();
+        super.dispose();
+      }
+    }
+
+    // screens/todo_screen.dart
+    class TodoScreen extends StatelessWidget {
+      final _controller = TextEditingController();
+
+      @override
+      Widget build(BuildContext context) {
+        return Consumer<TodoProvider>(
+          builder: (context, provider, _) {
+            if (provider.loading) {
+              return Center(child: CircularProgressIndicator());
+            }
+
+            return Column(
+              children: [
+                TextField(
+                  controller: _controller,
+                  decoration: InputDecoration(
+                    hintText: 'What needs to be done?',
+                  ),
+                  onSubmitted: (value) async {
+                    if (value.isNotEmpty) {
+                      await provider.addTodo(value);
+                      _controller.clear();
+                    }
+                  },
+                ),
+                Expanded(
+                  child: ListView.builder(
+                    itemCount: provider.todos.length,
+                    itemBuilder: (context, index) {
+                      final todo = provider.todos[index];
+                      return ListTile(
+                        leading: Checkbox(
+                          value: todo.completed,
+                          onChanged: (value) {
+                            provider.toggleTodo(todo.id, value ?? false);
+                          },
+                        ),
+                        title: Text(
+                          todo.title,
+                          style: TextStyle(
+                            decoration: todo.completed
+                              ? TextDecoration.lineThrough
+                              : null,
+                          ),
+                        ),
+                        trailing: IconButton(
+                          icon: Icon(Icons.delete),
+                          onPressed: () => provider.deleteTodo(todo.id),
+                        ),
+                      );
+                    },
+                  ),
+                ),
+              ],
+            );
+          },
+        );
+      }
+    }
+    ```
+  </Tab>
+
+  <Tab title="Python">
+    ```python
+    # app.py - Flask example
+    from flask import Flask, render_template, request, jsonify
+    from cocobase import Cocobase
+    import os
+
+    app = Flask(__name__)
+    db = Cocobase(api_key=os.getenv('COCOBASE_API_KEY'))
+
+    @app.route('/api/todos', methods=['GET'])
+    def get_todos():
+        todos = db.list_documents('todos', sort={'-createdAt': 1})
+        return jsonify(todos)
+
+    @app.route('/api/todos', methods=['POST'])
+    def create_todo():
+        data = request.json
+        todo = db.create_document('todos', {
+            'title': data['title'],
+            'completed': False,
+            'userId': data['userId']
+        })
+        return jsonify(todo)
+
+    @app.route('/api/todos/<todo_id>', methods=['PATCH'])
+    def update_todo(todo_id):
+        data = request.json
+        todo = db.update_document('todos', todo_id, data)
+        return jsonify(todo)
+
+    @app.route('/api/todos/<todo_id>', methods=['DELETE'])
+    def delete_todo(todo_id):
+        db.delete_document('todos', todo_id)
+        return jsonify({'success': True})
+
+    # static/app.js - Frontend
+    class TodoApp {
+      constructor() {
+        this.todos = [];
+        this.loadTodos();
+        this.setupRealtime();
+      }
+
+      async loadTodos() {
+        const response = await fetch('/api/todos');
+        this.todos = await response.json();
+        this.render();
+      }
+
+      async addTodo(title) {
+        await fetch('/api/todos', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ title, userId: 'current_user' })
+        });
+      }
+
+      async toggleTodo(id, completed) {
+        await fetch(`/api/todos/${id}`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ completed })
+        });
+      }
+
+      async deleteTodo(id) {
+        await fetch(`/api/todos/${id}`, { method: 'DELETE' });
+      }
+
+      render() {
+        // Render todo list to DOM
+      }
+    }
+    ```
+  </Tab>
+</Tabs>
+
+## E-Commerce Application
+
+A complete e-commerce app with products, cart, and checkout.
+
+### Features
+- Product catalog with search
+- Shopping cart
+- User orders
+- Inventory management
+- Real-time stock updates
+
+<Tabs>
+  <Tab title="JavaScript/Next.js">
+    ```typescript
+    // types/product.ts
+    export interface Product {
+      _id: string;
+      name: string;
+      description: string;
+      price: number;
+      stock: number;
+      category: string;
+      images: string[];
+    }
+
+    export interface CartItem {
+      productId: string;
+      quantity: number;
+      product?: Product;
+    }
+
+    export interface Order {
+      _id: string;
+      userId: string;
+      items: CartItem[];
+      total: number;
+      status: 'pending' | 'processing' | 'shipped' | 'delivered';
+      createdAt: string;
+    }
+
+    // hooks/useProducts.ts
+    export function useProducts(category?: string) {
+      const [products, setProducts] = useState<Product[]>([]);
+
+      useEffect(() => {
+        loadProducts();
+      }, [category]);
+
+      const loadProducts = async () => {
+        const filters = category ? { category: { $eq: category } } : {};
+        const data = await db.listDocuments<Product>('products', {
+          filters,
+          sort: { createdAt: -1 }
+        });
+        setProducts(data);
+      };
+
+      const searchProducts = async (query: string) => {
+        const data = await db.listDocuments<Product>('products', {
+          filters: {
+            name: { $contains: query }
+          }
+        });
+        setProducts(data);
+      };
+
+      return { products, searchProducts };
+    }
+
+    // hooks/useCart.ts
+    export function useCart() {
+      const [cart, setCart] = useState<CartItem[]>([]);
+
+      const addToCart = async (productId: string, quantity: number = 1) => {
+        const existing = cart.find(item => item.productId === productId);
+
+        if (existing) {
+          setCart(cart.map(item =>
+            item.productId === productId
+              ? { ...item, quantity: item.quantity + quantity }
+              : item
+          ));
+        } else {
+          setCart([...cart, { productId, quantity }]);
+        }
+
+        // Save to database
+        await db.createDocument('cart_items', {
+          userId: db.auth.getCurrentUser()?._id,
+          productId,
+          quantity
+        });
+      };
+
+      const removeFromCart = async (productId: string) => {
+        setCart(cart.filter(item => item.productId !== productId));
+
+        // Delete from database
+        const cartItem = await db.listDocuments('cart_items', {
+          filters: {
+            userId: { $eq: db.auth.getCurrentUser()?._id },
+            productId: { $eq: productId }
+          }
+        });
+
+        if (cartItem[0]) {
+          await db.deleteDocument('cart_items', cartItem[0]._id);
+        }
+      };
+
+      const checkout = async () => {
+        const user = db.auth.getCurrentUser();
+        if (!user) throw new Error('Please login to checkout');
+
+        // Calculate total
+        const total = cart.reduce((sum, item) => {
+          return sum + (item.product?.price || 0) * item.quantity;
+        }, 0);
+
+        // Create order
+        const order = await db.createDocument<Order>('orders', {
+          userId: user._id,
+          items: cart,
+          total,
+          status: 'pending'
+        });
+
+        // Clear cart
+        setCart([]);
+
+        return order;
+      };
+
+      return { cart, addToCart, removeFromCart, checkout };
+    }
+
+    // components/ProductCard.tsx
+    export function ProductCard({ product }: { product: Product }) {
+      const { addToCart } = useCart();
+
+      return (
+        <div className="product-card">
+          <img src={product.images[0]} alt={product.name} />
+          <h3>{product.name}</h3>
+          <p>{product.description}</p>
+          <p className="price">${product.price.toFixed(2)}</p>
+          <p className="stock">
+            {product.stock > 0 ? `${product.stock} in stock` : 'Out of stock'}
+          </p>
+          <button
+            onClick={() => addToCart(product._id)}
+            disabled={product.stock === 0}
+          >
+            Add to Cart
+          </button>
+        </div>
+      );
+    }
+
+    // components/Cart.tsx
+    export function Cart() {
+      const { cart, removeFromCart, checkout } = useCart();
+      const [loading, setLoading] = useState(false);
+
+      const handleCheckout = async () => {
+        setLoading(true);
+        try {
+          const order = await checkout();
+          alert(`Order placed! Order ID: ${order._id}`);
+        } finally {
+          setLoading(false);
+        }
+      };
+
+      const total = cart.reduce((sum, item) =>
+        sum + (item.product?.price || 0) * item.quantity, 0
+      );
+
+      return (
+        <div className="cart">
+          <h2>Shopping Cart</h2>
+          {cart.map(item => (
+            <div key={item.productId} className="cart-item">
+              <span>{item.product?.name}</span>
+              <span>x{item.quantity}</span>
+              <span>${((item.product?.price || 0) * item.quantity).toFixed(2)}</span>
+              <button onClick={() => removeFromCart(item.productId)}>
+                Remove
+              </button>
+            </div>
+          ))}
+          <div className="cart-total">
+            <strong>Total: ${total.toFixed(2)}</strong>
+          </div>
+          <button onClick={handleCheckout} disabled={loading || cart.length === 0}>
+            {loading ? 'Processing...' : 'Checkout'}
+          </button>
+        </div>
+      );
+    }
+    ```
+  </Tab>
+
+  <Tab title="Flutter">
+    ```dart
+    // models/product.dart
+    class Product {
+      final String id;
+      final String name;
+      final String description;
+      final double price;
+      final int stock;
+      final String category;
+      final List<String> images;
+
+      Product({
+        required this.id,
+        required this.name,
+        required this.description,
+        required this.price,
+        required this.stock,
+        required this.category,
+        required this.images,
+      });
+
+      factory Product.fromJson(Map<String, dynamic> json) {
+        return Product(
+          id: json['_id'],
+          name: json['name'],
+          description: json['description'],
+          price: json['price'].toDouble(),
+          stock: json['stock'],
+          category: json['category'],
+          images: List<String>.from(json['images']),
+        );
+      }
+    }
+
+    // providers/product_provider.dart
+    class ProductProvider with ChangeNotifier {
+      final Cocobase _db;
+      List<Product> _products = [];
+      bool _loading = false;
+
+      ProductProvider(this._db);
+
+      List<Product> get products => _products;
+      bool get loading => _loading;
+
+      Future<void> loadProducts({String? category}) async {
+        _loading = true;
+        notifyListeners();
+
+        try {
+          final filters = category != null
+            ? {'category': {'\$eq': category}}
+            : null;
+
+          final data = await _db.listDocuments('products', filters: filters);
+          _products = data.map((json) => Product.fromJson(json)).toList();
+        } finally {
+          _loading = false;
+          notifyListeners();
+        }
+      }
+
+      Future<void> searchProducts(String query) async {
+        final data = await _db.listDocuments('products', filters: {
+          'name': {'\$contains': query}
+        });
+        _products = data.map((json) => Product.fromJson(json)).toList();
+        notifyListeners();
+      }
+    }
+
+    // providers/cart_provider.dart
+    class CartProvider with ChangeNotifier {
+      final Cocobase _db;
+      final Map<String, int> _items = {};
+
+      CartProvider(this._db);
+
+      Map<String, int> get items => _items;
+      int get itemCount => _items.length;
+
+      double getTotal(List<Product> products) {
+        double total = 0;
+        _items.forEach((productId, quantity) {
+          final product = products.firstWhere((p) => p.id == productId);
+          total += product.price * quantity;
+        });
+        return total;
+      }
+
+      Future<void> addItem(String productId, {int quantity = 1}) async {
+        if (_items.containsKey(productId)) {
+          _items[productId] = _items[productId]! + quantity;
+        } else {
+          _items[productId] = quantity;
+        }
+
+        await _db.createDocument('cart_items', {
+          'userId': (await _db.getCurrentUser())?['_id'],
+          'productId': productId,
+          'quantity': quantity,
+        });
+
+        notifyListeners();
+      }
+
+      Future<void> removeItem(String productId) async {
+        _items.remove(productId);
+
+        final cartItems = await _db.listDocuments('cart_items', filters: {
+          'productId': {'\$eq': productId}
+        });
+
+        if (cartItems.isNotEmpty) {
+          await _db.deleteDocument('cart_items', cartItems[0]['_id']);
+        }
+
+        notifyListeners();
+      }
+
+      Future<String> checkout(List<Product> products) async {
+        final total = getTotal(products);
+        final user = await _db.getCurrentUser();
+
+        final order = await _db.createDocument('orders', {
+          'userId': user?['_id'],
+          'items': _items.entries.map((e) => {
+            'productId': e.key,
+            'quantity': e.value,
+          }).toList(),
+          'total': total,
+          'status': 'pending',
+        });
+
+        _items.clear();
+        notifyListeners();
+
+        return order['_id'];
+      }
+    }
+    ```
+  </Tab>
+</Tabs>
+
+## Social Media Feed
+
+A social media application with posts, likes, comments, and follows.
+
+### Features
+- Create and view posts
+- Like/unlike posts
+- Comment on posts
+- Follow/unfollow users
+- Real-time feed updates
+- User profiles
+
+<Tabs>
+  <Tab title="JavaScript/React">
+    ```typescript
+    // types/social.ts
+    export interface Post {
+      _id: string;
+      userId: string;
+      user?: User;
+      content: string;
+      images?: string[];
+      likes: string[];
+      commentCount: number;
+      createdAt: string;
+    }
+
+    export interface Comment {
+      _id: string;
+      postId: string;
+      userId: string;
+      user?: User;
+      content: string;
+      createdAt: string;
+    }
+
+    export interface User {
+      _id: string;
+      email: string;
+      data: {
+        full_name: string;
+        avatar?: string;
+        bio?: string;
+      };
+    }
+
+    // hooks/useFeed.ts
+    export function useFeed() {
+      const [posts, setPosts] = useState<Post[]>([]);
+      const [loading, setLoading] = useState(true);
+
+      useEffect(() => {
+        loadFeed();
+
+        // Real-time updates
+        const unsubscribe = db.watch('posts', (event) => {
+          if (event.type === 'create') {
+            setPosts(prev => [event.data as Post, ...prev]);
+          } else if (event.type === 'update') {
+            setPosts(prev => prev.map(p =>
+              p._id === event.data._id ? event.data as Post : p
+            ));
+          } else if (event.type === 'delete') {
+            setPosts(prev => prev.filter(p => p._id !== event.documentId));
+          }
+        });
+
+        return () => unsubscribe();
+      }, []);
+
+      const loadFeed = async () => {
+        try {
+          const data = await db.listDocuments<Post>('posts', {
+            sort: { createdAt: -1 },
+            populate: ['userId'],
+            limit: 20
+          });
+          setPosts(data);
+        } finally {
+          setLoading(false);
+        }
+      };
+
+      const createPost = async (content: string, images?: string[]) => {
+        const post = await db.createDocument<Post>('posts', {
+          userId: db.auth.getCurrentUser()?._id,
+          content,
+          images: images || [],
+          likes: [],
+          commentCount: 0
+        });
+        return post;
+      };
+
+      const likePost = async (postId: string) => {
+        const userId = db.auth.getCurrentUser()?._id;
+        const post = posts.find(p => p._id === postId);
+
+        if (!post || !userId) return;
+
+        const likes = post.likes.includes(userId)
+          ? post.likes.filter(id => id !== userId)
+          : [...post.likes, userId];
+
+        await db.updateDocument('posts', postId, { likes });
+      };
+
+      const deletePost = async (postId: string) => {
+        await db.deleteDocument('posts', postId);
+      };
+
+      return { posts, loading, createPost, likePost, deletePost };
+    }
+
+    // hooks/useComments.ts
+    export function useComments(postId: string) {
+      const [comments, setComments] = useState<Comment[]>([]);
+
+      useEffect(() => {
+        loadComments();
+      }, [postId]);
+
+      const loadComments = async () => {
+        const data = await db.listDocuments<Comment>('comments', {
+          filters: { postId: { $eq: postId } },
+          sort: { createdAt: -1 },
+          populate: ['userId']
+        });
+        setComments(data);
+      };
+
+      const addComment = async (content: string) => {
+        const comment = await db.createDocument<Comment>('comments', {
+          postId,
+          userId: db.auth.getCurrentUser()?._id,
+          content
+        });
+
+        // Increment comment count
+        const post = await db.getDocument('posts', postId);
+        await db.updateDocument('posts', postId, {
+          commentCount: (post.commentCount || 0) + 1
+        });
+
+        return comment;
+      };
+
+      return { comments, addComment };
+    }
+
+    // components/PostCard.tsx
+    export function PostCard({ post }: { post: Post }) {
+      const { likePost, deletePost } = useFeed();
+      const currentUser = db.auth.getCurrentUser();
+      const isLiked = post.likes.includes(currentUser?._id || '');
+
+      return (
+        <div className="post-card">
+          <div className="post-header">
+            <img src={post.user?.data.avatar} alt={post.user?.data.full_name} />
+            <div>
+              <h4>{post.user?.data.full_name}</h4>
+              <span>{new Date(post.createdAt).toLocaleDateString()}</span>
+            </div>
+          </div>
+
+          <p className="post-content">{post.content}</p>
+
+          {post.images && post.images.length > 0 && (
+            <div className="post-images">
+              {post.images.map((img, i) => (
+                <img key={i} src={img} alt="" />
+              ))}
+            </div>
+          )}
+
+          <div className="post-actions">
+            <button onClick={() => likePost(post._id)}>
+              {isLiked ? '❤️' : '🤍'} {post.likes.length}
+            </button>
+            <button>💬 {post.commentCount}</button>
+            {currentUser?._id === post.userId && (
+              <button onClick={() => deletePost(post._id)}>🗑️ Delete</button>
+            )}
+          </div>
+        </div>
+      );
+    }
+
+    // components/CreatePost.tsx
+    export function CreatePost() {
+      const { createPost } = useFeed();
+      const [content, setContent] = useState('');
+      const [posting, setPosting] = useState(false);
+
+      const handleSubmit = async (e: React.FormEvent) => {
+        e.preventDefault();
+        if (!content.trim()) return;
+
+        setPosting(true);
+        try {
+          await createPost(content);
+          setContent('');
+        } finally {
+          setPosting(false);
+        }
+      };
+
+      return (
+        <form onSubmit={handleSubmit} className="create-post">
+          <textarea
+            value={content}
+            onChange={(e) => setContent(e.target.value)}
+            placeholder="What's on your mind?"
+            rows={3}
+          />
+          <button type="submit" disabled={posting || !content.trim()}>
+            {posting ? 'Posting...' : 'Post'}
+          </button>
+        </form>
+      );
+    }
+    ```
+  </Tab>
+</Tabs>
+
+## Real-Time Chat Application
+
+A complete chat app with rooms, direct messages, and online status.
+
+### Features
+- Real-time messaging
+- Chat rooms
+- Direct messages
+- Online status
+- Typing indicators
+- Message history
+
+<Tabs>
+  <Tab title="JavaScript/React">
+    ```typescript
+    // hooks/useChat.ts
+    export function useChat(roomId: string) {
+      const [messages, setMessages] = useState<Message[]>([]);
+      const [typing, setTyping] = useState<string[]>([]);
+
+      useEffect(() => {
+        // Load message history
+        loadMessages();
+
+        // Subscribe to new messages
+        const unsubscribe = db.realtimeApi.joinRoom(roomId, (event) => {
+          if (event.type === 'message') {
+            setMessages(prev => [...prev, event.data]);
+          } else if (event.type === 'typing') {
+            setTyping(prev => [...prev, event.userId]);
+            setTimeout(() => {
+              setTyping(prev => prev.filter(id => id !== event.userId));
+            }, 3000);
+          }
+        });
+
+        return () => unsubscribe();
+      }, [roomId]);
+
+      const loadMessages = async () => {
+        const data = await db.listDocuments('messages', {
+          filters: { roomId: { $eq: roomId } },
+          sort: { createdAt: 1 },
+          populate: ['userId'],
+          limit: 50
+        });
+        setMessages(data);
+      };
+
+      const sendMessage = async (content: string) => {
+        const message = await db.createDocument('messages', {
+          roomId,
+          userId: db.auth.getCurrentUser()?._id,
+          content
+        });
+
+        // Broadcast to room
+        await db.realtimeApi.broadcast(roomId, {
+          type: 'message',
+          data: message
+        });
+
+        return message;
+      };
+
+      const sendTyping = async () => {
+        await db.realtimeApi.broadcast(roomId, {
+          type: 'typing',
+          userId: db.auth.getCurrentUser()?._id
+        });
+      };
+
+      return { messages, typing, sendMessage, sendTyping };
+    }
+
+    // components/ChatRoom.tsx
+    export function ChatRoom({ roomId }: { roomId: string }) {
+      const { messages, typing, sendMessage, sendTyping } = useChat(roomId);
+      const [input, setInput] = useState('');
+      const messagesEndRef = useRef<HTMLDivElement>(null);
+
+      useEffect(() => {
+        messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+      }, [messages]);
+
+      const handleSend = async (e: React.FormEvent) => {
+        e.preventDefault();
+        if (!input.trim()) return;
+
+        await sendMessage(input);
+        setInput('');
+      };
+
+      const handleTyping = () => {
+        sendTyping();
+      };
+
+      return (
+        <div className="chat-room">
+          <div className="messages">
+            {messages.map(msg => (
+              <div key={msg._id} className="message">
+                <strong>{msg.user?.data.full_name}:</strong>
+                <span>{msg.content}</span>
+                <small>{new Date(msg.createdAt).toLocaleTimeString()}</small>
+              </div>
+            ))}
+            {typing.length > 0 && (
+              <div className="typing-indicator">
+                Someone is typing...
+              </div>
+            )}
+            <div ref={messagesEndRef} />
+          </div>
+
+          <form onSubmit={handleSend} className="message-input">
+            <input
+              value={input}
+              onChange={(e) => {
+                setInput(e.target.value);
+                handleTyping();
+              }}
+              placeholder="Type a message..."
+            />
+            <button type="submit">Send</button>
+          </form>
+        </div>
+      );
+    }
+    ```
+  </Tab>
+</Tabs>
+
+## Notes App with Real-Time Sync
+
+A collaborative notes app with folders and real-time synchronization.
+
+### Features
+- Create and organize notes in folders
+- Rich text editing
+- Real-time sync across devices
+- Collaboration with other users
+- Search notes
+
+```typescript
+// Full implementation available in the examples repository
+```
+
+## Complete App Architecture
+
+All these apps follow this general architecture:
+
+```
+/src
+  /lib
+    cocobase.ts         # Cocobase client setup
+  /types
+    index.ts            # TypeScript interfaces
+  /hooks
+    useAuth.ts          # Authentication hook
+    useData.ts          # Data fetching hooks
+  /components
+    ...                 # React components
+  /pages or /screens
+    ...                 # App pages/screens
+```
+
+## Best Practices
+
+<AccordionGroup>
+  <Accordion title="Data Modeling">
+    - Keep documents denormalized for read performance
+    - Use relationships for one-to-many associations
+    - Store frequently accessed data together
+  </Accordion>
+
+  <Accordion title="Real-Time Updates">
+    - Only subscribe to data you're actively displaying
+    - Unsubscribe when components unmount
+    - Filter subscriptions to reduce bandwidth
+  </Accordion>
+
+  <Accordion title="Error Handling">
+    - Always handle errors in async operations
+    - Show user-friendly error messages
+    - Implement retry logic for network errors
+  </Accordion>
+
+  <Accordion title="Performance">
+    - Paginate large lists
+    - Cache frequently accessed data
+    - Use optimistic UI updates
+  </Accordion>
+</AccordionGroup>
+
+## Source Code
+
+Find complete source code for all these examples in our GitHub repository:
+
+<Card
+  title="Cocobase Examples Repository"
+  icon="github"
+  href="https://github.com/cocobase/examples"
+>
+  Full source code, setup instructions, and live demos
+</Card>
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Deploy Your App" icon="rocket" href="/guides/deployment">
+    Learn how to deploy your Cocobase app to production
+  </Card>
+  <Card title="Best Practices" icon="star" href="/guides/best-practices">
+    Optimize your app for performance and security
+  </Card>
+</CardGroup>

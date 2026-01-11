@@ -1,0 +1,165 @@
+{
+  "name": "Cocobase",
+  "logo": {
+    "dark": "/logo/dark.svg",
+    "light": "/logo/light.svg"
+  },
+  "favicon": "/favicon.svg",
+  "colors": {
+    "primary": "#0D9373",
+    "light": "#07C983",
+    "dark": "#0D9373",
+    "anchors": {
+      "from": "#0D9373",
+      "to": "#07C983"
+    }
+  },
+  "topbarLinks": [
+    {
+      "name": "Sign In",
+      "url": "https://cocobase.buzz/login"
+    }
+  ],
+  "topbarCtaButton": {
+    "name": "Dashboard",
+    "url": "https://cocobase.buzz/dashboard"
+  },
+  "tabs": [
+    {
+      "name": "API Reference",
+      "url": "api-reference"
+    },
+    {
+      "name": "Examples",
+      "url": "examples"
+    }
+  ],
+  "anchors": [
+    {
+      "name": "Discord Community",
+      "icon": "discord",
+      "url": "https://discord.gg/cocobase"
+    },
+    {
+      "name": "GitHub",
+      "icon": "github",
+      "url": "https://github.com/cocobase"
+    },
+    {
+      "name": "Blog",
+      "icon": "newspaper",
+      "url": "https://cocobase.buzz/blog"
+    }
+  ],
+  "navigation": [
+    {
+      "group": "Get Started",
+      "pages": [
+        "index",
+        "guides/getting-started"
+      ]
+    },
+    {
+      "group": "Core Concepts",
+      "pages": [
+        "core-concepts/authentication",
+        "core-concepts/collections",
+        "core-concepts/data-types"
+      ]
+    },
+    {
+      "group": "Features",
+      "pages": [
+        "features/crud-operations",
+        "features/querying",
+        "features/realtime",
+        "features/relationships",
+        "features/file-storage",
+        "features/cloud-functions",
+        "features/advanced"
+      ]
+    },
+    {
+      "group": "SDK Reference",
+      "pages": [
+        "sdk-reference/javascript",
+        "sdk-reference/flutter",
+        "sdk-reference/golang",
+        "sdk-reference/python"
+      ]
+    },
+    {
+      "group": "Guides",
+      "pages": [
+        "guides/best-practices",
+        "guides/troubleshooting",
+        "guides/security",
+        "guides/performance"
+      ]
+    },
+    {
+      "group": "Examples",
+      "pages": [
+        "examples/complete-apps",
+        "examples/todo-app",
+        "examples/ecommerce",
+        "examples/social-media",
+        "examples/chat-app"
+      ]
+    },
+    {
+      "group": "API Documentation",
+      "pages": [
+        "api-reference/introduction",
+        "api-reference/authentication"
+      ]
+    },
+    {
+      "group": "Collections API",
+      "pages": [
+        "api-reference/collections/create",
+        "api-reference/collections/read",
+        "api-reference/collections/update",
+        "api-reference/collections/delete",
+        "api-reference/collections/query"
+      ]
+    },
+    {
+      "group": "Auth API",
+      "pages": [
+        "api-reference/auth/register",
+        "api-reference/auth/login",
+        "api-reference/auth/logout",
+        "api-reference/auth/profile",
+        "api-reference/auth/oauth"
+      ]
+    },
+    {
+      "group": "Storage API",
+      "pages": [
+        "api-reference/storage/upload",
+        "api-reference/storage/download",
+        "api-reference/storage/delete",
+        "api-reference/storage/list"
+      ]
+    },
+    {
+      "group": "Realtime API",
+      "pages": [
+        "api-reference/realtime/watch",
+        "api-reference/realtime/broadcast",
+        "api-reference/realtime/rooms"
+      ]
+    }
+  ],
+  "footerSocials": {
+    "twitter": "https://twitter.com/cocobase",
+    "github": "https://github.com/cocobase",
+    "discord": "https://discord.gg/cocobase"
+  },
+  "analytics": {
+    "ga4": {
+      "measurementId": "G-XXXXXXXXXX"
+    }
+  }
+}

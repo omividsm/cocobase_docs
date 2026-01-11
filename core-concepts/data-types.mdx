@@ -1,0 +1,513 @@
+---
+title: Data Types
+description: Supported data types and type conversion in Cocobase
+icon: code
+---
+
+# Data Types
+
+Cocobase supports all standard JSON data types plus additional type conversion utilities for strongly-typed applications.
+
+## Primitive Types
+
+### String
+
+Text data of any length.
+
+```typescript
+{
+  "name": "Alice Johnson",
+  "bio": "Full-stack developer passionate about clean code",
+  "website": "https://alice.dev"
+}
+```
+
+### Number
+
+Integers and floating-point numbers.
+
+```typescript
+{
+  "age": 28,
+  "price": 99.99,
+  "rating": 4.5,
+  "quantity": 100
+}
+```
+
+<Note>
+  Numbers are stored as IEEE 754 double-precision floating-point. Maximum safe integer: `2^53 - 1` (9,007,199,254,740,991)
+</Note>
+
+### Boolean
+
+True or false values.
+
+```typescript
+{
+  "isActive": true,
+  "emailVerified": false,
+  "hasSubscription": true
+}
+```
+
+### Null
+
+Represents absence of a value.
+
+```typescript
+{
+  "middleName": null,
+  "avatar": null
+}
+```
+
+## Complex Types
+
+### Object
+
+Nested JSON objects for structured data.
+
+```typescript
+{
+  "address": {
+    "street": "123 Main St",
+    "city": "New York",
+    "zipCode": "10001",
+    "coordinates": {
+      "lat": 40.7128,
+      "lng": -74.0060
+    }
+  }
+}
+```
+
+**Nesting limit:** 100 levels deep
+
+### Array
+
+Ordered collections of any type.
+
+```typescript
+{
+  "tags": ["javascript", "react", "nodejs"],
+  "scores": [85, 92, 78, 95],
+  "metadata": [
+    { "key": "category", "value": "tech" },
+    { "key": "priority", "value": 1 }
+  ]
+}
+```
+
+**Maximum length:** 100,000 elements
+
+## Date and Time
+
+Dates are stored as ISO 8601 strings.
+
+```typescript
+{
+  "createdAt": "2024-01-15T10:30:00Z",
+  "publishDate": "2024-02-01T00:00:00Z",
+  "lastLogin": "2024-01-20T14:45:30.123Z"
+}
+```
+
+<Tabs>
+  <Tab title="JavaScript">
+    ```typescript
+    // Create with current date
+    await db.createDocument("events", {
+      name: "Product Launch",
+      date: new Date().toISOString()
+    });
+
+    // Parse date from document
+    const event = await db.getDocument("events", "event_123");
+    const date = new Date(event.date);
+    console.log(date.toLocaleDateString()); // "1/15/2024"
+    ```
+  </Tab>
+
+  <Tab title="Dart">
+    ```dart
+    // Create with current date
+    await db.createDocument('events', {
+      'name': 'Product Launch',
+      'date': DateTime.now().toIso8601String(),
+    });
+
+    // Parse date from document
+    final event = await db.getDocument('events', 'event_123');
+    final date = DateTime.parse(event['date']);
+    print(date.toString());
+    ```
+  </Tab>
+
+  <Tab title="Go">
+    ```go
+    // Create with current date
+    db.CreateDocument(ctx, "events", map[string]any{
+        "name": "Product Launch",
+        "date": time.Now().Format(time.RFC3339),
+    })
+
+    // Parse date from document
+    event, _ := db.GetDocument(ctx, "events", "event_123")
+    date, _ := time.Parse(time.RFC3339, event["date"].(string))
+    ```
+  </Tab>
+
+  <Tab title="Python">
+    ```python
+    from datetime import datetime
+
+    # Create with current date
+    db.create_document("events", {
+        "name": "Product Launch",
+        "date": datetime.now().isoformat()
+    })
+
+    # Parse date from document
+    event = db.get_document("events", "event_123")
+    date = datetime.fromisoformat(event['date'])
+    ```
+  </Tab>
+</Tabs>
+
+## Type Conversion (Flutter/Dart)
+
+Flutter SDK provides type converters for type-safe operations.
+
+### Defining Converters
+
+```dart
+// models/user.dart
+class User {
+  final String id;
+  final String name;
+  final String email;
+  final int age;
+  final DateTime createdAt;
+
+  User({
+    required this.id,
+    required this.name,
+    required this.email,
+    required this.age,
+    required this.createdAt,
+  });
+
+  // From JSON
+  factory User.fromJson(Map<String, dynamic> json) {
+    return User(
+      id: json['_id'] as String,
+      name: json['name'] as String,
+      email: json['email'] as String,
+      age: json['age'] as int,
+      createdAt: DateTime.parse(json['createdAt'] as String),
+    );
+  }
+
+  // To JSON
+  Map<String, dynamic> toJson() {
+    return {
+      'name': name,
+      'email': email,
+      'age': age,
+    };
+  }
+}
+```
+
+### Registering Converters
+
+```dart
+// Register converters globally
+db.registerConverter<User>(
+  fromJson: (json) => User.fromJson(json),
+  toJson: (user) => user.toJson(),
+);
+
+// Use typed operations
+final user = await db.createDocument<User>('users', User(
+  id: '',
+  name: 'Alice',
+  email: 'alice@example.com',
+  age: 28,
+  createdAt: DateTime.now(),
+));
+
+// user is strongly typed
+print(user.name); // Alice
+```
+
+## TypeScript Type Definitions
+
+Define interfaces for compile-time type safety:
+
+```typescript
+interface Product {
+  _id: string;
+  name: string;
+  description: string;
+  price: number;
+  inStock: boolean;
+  tags: string[];
+  category: 'electronics' | 'clothing' | 'books';
+  metadata: {
+    brand: string;
+    sku: string;
+  };
+  createdAt: string;
+  updatedAt: string;
+}
+
+// Type-safe operations
+const product = await db.createDocument<Product>("products", {
+  name: "Laptop",
+  description: "High-performance laptop",
+  price: 1299.99,
+  inStock: true,
+  tags: ["computer", "electronics"],
+  category: "electronics",
+  metadata: {
+    brand: "TechCorp",
+    sku: "LAP-001"
+  }
+});
+
+// TypeScript knows the shape
+console.log(product.price); // ✅ number
+console.log(product.foo);   // ❌ Error: Property 'foo' does not exist
+```
+
+## Special Data Types
+
+### File References
+
+Store file URLs or references to uploaded files:
+
+```typescript
+{
+  "profilePicture": "https://storage.cocobase.buzz/files/avatar.jpg",
+  "documents": [
+    "https://storage.cocobase.buzz/files/resume.pdf",
+    "https://storage.cocobase.buzz/files/portfolio.pdf"
+  ]
+}
+```
+
+See [File Storage](/features/file-storage) for details.
+
+### Document References
+
+Store references to other documents:
+
+```typescript
+{
+  "userId": "user_123",           // Reference to user document
+  "categoryId": "category_456",   // Reference to category document
+  "relatedPosts": [               // Array of references
+    "post_789",
+    "post_012"
+  ]
+}
+```
+
+Use [population](/features/relationships) to fetch referenced documents.
+
+### Geolocation
+
+Store coordinates as nested objects:
+
+```typescript
+{
+  "location": {
+    "lat": 40.7128,
+    "lng": -74.0060,
+    "accuracy": 10
+  }
+}
+```
+
+Query with range filters:
+
+```typescript
+const nearbyPlaces = await db.listDocuments("places", {
+  filters: {
+    "location.lat": { $gte: 40.0, $lte: 41.0 },
+    "location.lng": { $gte: -75.0, $lte: -73.0 }
+  }
+});
+```
+
+## Type Validation
+
+While Cocobase is schema-less, you can implement validation:
+
+### Client-Side Validation (TypeScript)
+
+```typescript
+import { z } from 'zod';
+
+const UserSchema = z.object({
+  name: z.string().min(1).max(100),
+  email: z.string().email(),
+  age: z.number().int().min(0).max(150),
+  role: z.enum(['admin', 'user', 'moderator']),
+});
+
+// Validate before creating
+const userData = {
+  name: "Alice",
+  email: "alice@example.com",
+  age: 28,
+  role: "user" as const
+};
+
+const validatedData = UserSchema.parse(userData);
+await db.createDocument("users", validatedData);
+```
+
+### Server-Side Validation (Cloud Functions)
+
+```python
+def validate_user(data):
+    required = ['name', 'email', 'age']
+    for field in required:
+        if field not in data:
+            raise ValueError(f"Missing required field: {field}")
+
+    if not isinstance(data['age'], int) or data['age'] < 0:
+        raise ValueError("Age must be a positive integer")
+
+    if '@' not in data['email']:
+        raise ValueError("Invalid email format")
+
+    return True
+
+# In your cloud function
+def create_user_handler(request):
+    validate_user(request.data)
+    return db.collection('users').create(request.data)
+```
+
+## Type Coercion
+
+Cocobase automatically handles some type conversions:
+
+```typescript
+// Numbers
+"42" → 42         // String to number in numeric context
+42.0 → 42         // Float to int when whole number
+
+// Booleans
+"true" → true     // String to boolean
+1 → true          // Number to boolean
+0 → false
+
+// Dates
+"2024-01-15" → "2024-01-15T00:00:00Z"  // Date string normalization
+```
+
+<Warning>
+  Automatic coercion is not guaranteed. Always store data in the correct type to avoid unexpected behavior.
+</Warning>
+
+## Best Practices
+
+<AccordionGroup>
+  <Accordion title="Use Consistent Types">
+    Keep field types consistent across documents:
+
+    ```typescript
+    // ✅ Good - Consistent types
+    { "price": 99.99 }
+    { "price": 149.99 }
+
+    // ❌ Bad - Mixed types
+    { "price": 99.99 }
+    { "price": "149.99" }  // String instead of number
+    ```
+  </Accordion>
+
+  <Accordion title="Store Dates as ISO Strings">
+    Always use ISO 8601 format for dates:
+
+    ```typescript
+    // ✅ Good
+    { "date": "2024-01-15T10:30:00Z" }
+
+    // ❌ Bad
+    { "date": "01/15/2024" }        // Non-standard format
+    { "date": 1705319400000 }       // Unix timestamp
+    ```
+  </Accordion>
+
+  <Accordion title="Use Arrays for Ordered Data">
+    Use arrays when order matters, objects when it doesn't:
+
+    ```typescript
+    // ✅ Array for ordered list
+    {
+      "steps": ["Mix", "Bake", "Cool", "Serve"]
+    }
+
+    // ✅ Object for key-value pairs
+    {
+      "settings": {
+        "theme": "dark",
+        "language": "en",
+        "notifications": true
+      }
+    }
+    ```
+  </Accordion>
+
+  <Accordion title="Define TypeScript Interfaces">
+    Always define interfaces for your data models:
+
+    ```typescript
+    // ✅ Good - Clear interface
+    interface Post {
+      _id: string;
+      title: string;
+      content: string;
+      authorId: string;
+      tags: string[];
+      publishedAt: string;
+    }
+
+    // Use in operations
+    const post = await db.createDocument<Post>("posts", {...});
+    ```
+  </Accordion>
+</AccordionGroup>
+
+## Type Limits
+
+| Type | Maximum Size/Length |
+|------|-------------------|
+| String | 16 MB per document |
+| Number | ±1.7976931348623157 × 10^308 |
+| Array | 100,000 elements |
+| Object | 100 levels of nesting |
+| Document | 16 MB total size |
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Collections" icon="database" href="/core-concepts/collections">
+    Learn about organizing data in collections
+  </Card>
+  <Card title="Type Safety Guide" icon="shield" href="/guides/type-safety">
+    Advanced type safety patterns
+  </Card>
+  <Card title="Validation" icon="check" href="/guides/validation">
+    Implement data validation
+  </Card>
+  <Card title="CRUD Operations" icon="pen" href="/features/crud-operations">
+    Work with your typed data
+  </Card>
+</CardGroup>

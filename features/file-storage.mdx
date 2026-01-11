@@ -1,0 +1,1350 @@
+---
+title: "File Storage"
+description: "Upload, manage, and serve files with S3-compatible cloud storage"
+---
+
+# File Storage
+
+Upload and manage files for your application with automatic S3 storage, built-in optimization, and secure access control across all platforms.
+
+<Note>
+  Cocobase provides S3-compatible file storage for profile pictures, documents,
+  media files, and any other file uploads your application needs.
+</Note>
+
+## Overview
+
+File storage features:
+
+- **S3-compatible storage** - Reliable, scalable cloud storage
+- **Multiple file types** - Images, documents, videos, archives
+- **Direct uploads** - Upload files directly from any platform
+- **Automatic organization** - Organize files by directories
+- **Image optimization** - Automatic resizing and compression
+- **Access control** - Secure file access with permissions
+- **Storage monitoring** - Track usage and limits
+
+---
+
+## Upload Files
+
+Upload files to your project storage with automatic S3 integration.
+
+### Basic Upload
+
+<Tabs>
+<Tab title="JavaScript">
+```javascript
+import { Cocobase } from 'cocobase';
+
+const db = new Cocobase({
+  apiKey: 'your-api-key',
+  projectId: 'your-project-id'
+});
+
+// Upload a file
+const fileInput = document.querySelector('input[type="file"]');
+const file = fileInput.files[0];
+
+const result = await db.storage.upload(file);
+console.log('File URL:', result.url);
+
+// Upload to a specific directory
+const avatarResult = await db.storage.upload(file, 'avatars');
+console.log('Avatar URL:', avatarResult.url);
+```
+</Tab>
+
+<Tab title="Dart">
+```dart
+import 'package:cocobase/cocobase.dart';
+import 'dart:io';
+
+final db = Cocobase(CocobaseConfig(
+  apiKey: 'your-api-key',
+  projectId: 'your-project-id',
+));
+
+// Upload a file
+final file = File('/path/to/image.jpg');
+final result = await db.storage.upload(file);
+print('File URL: ${result.url}');
+
+// Upload to a specific directory
+final avatarResult = await db.storage.upload(file, directory: 'avatars');
+print('Avatar URL: ${avatarResult.url}');
+```
+</Tab>
+
+<Tab title="Go">
+```go
+package main
+
+import (
+    "context"
+    "os"
+    "github.com/lordace-coder/cocobase-go/cocobase"
+)
+
+func main() {
+    client := cocobase.NewClient(cocobase.Config{
+        APIKey:    "your-api-key",
+        ProjectID: "your-project-id",
+    })
+
+    ctx := context.Background()
+
+    // Upload a file
+    file, _ := os.Open("/path/to/image.jpg")
+    defer file.Close()
+
+    result, err := client.UploadFile(ctx, file, "image.jpg", "")
+    if err != nil {
+        log.Fatal(err)
+    }
+
+    fmt.Printf("File URL: %s\n", result.URL)
+
+    // Upload to a specific directory
+    file2, _ := os.Open("/path/to/avatar.jpg")
+    defer file2.Close()
+
+    avatarResult, err := client.UploadFile(ctx, file2, "avatar.jpg", "avatars")
+    fmt.Printf("Avatar URL: %s\n", avatarResult.URL)
+}
+```
+</Tab>
+
+<Tab title="Python">
+```python
+import requests
+
+API_KEY = 'your-api-key'
+PROJECT_ID = 'your-project-id'
+BASE_URL = 'https://api.cocobase.buzz'
+
+# Upload a file
+with open('/path/to/image.jpg', 'rb') as f:
+    files = {'file': f}
+
+    response = requests.post(
+        f'{BASE_URL}/storage/files/{PROJECT_ID}',
+        files=files
+    )
+
+    result = response.json()
+    print(f"File URL: {result['s3_response']}")
+
+# Upload to a specific directory
+with open('/path/to/avatar.jpg', 'rb') as f:
+    files = {'file': f}
+    data = {'directory': 'avatars'}
+
+    response = requests.post(
+        f'{BASE_URL}/storage/files/{PROJECT_ID}',
+        files=files,
+        data=data
+    )
+
+    result = response.json()
+    print(f"Avatar URL: {result['s3_response']}")
+```
+</Tab>
+
+<Tab title="HTTP">
+```bash
+# Basic upload
+curl -X POST https://api.cocobase.buzz/storage/files/your-project-id \
+  -F "file=@/path/to/image.jpg"
+
+# Upload to specific directory
+curl -X POST https://api.cocobase.buzz/storage/files/your-project-id \
+  -F "file=@/path/to/avatar.jpg" \
+  -F "directory=avatars"
+```
+</Tab>
+</Tabs>
+
+### Upload with Progress
+
+<Tabs>
+<Tab title="JavaScript">
+```javascript
+async function uploadWithProgress(file, onProgress) {
+  return new Promise((resolve, reject) => {
+    const xhr = new XMLHttpRequest();
+
+    xhr.upload.addEventListener('progress', (e) => {
+      if (e.lengthComputable) {
+        const percentComplete = (e.loaded / e.total) * 100;
+        onProgress(percentComplete);
+      }
+    });
+
+    xhr.addEventListener('load', () => {
+      if (xhr.status === 200) {
+        resolve(JSON.parse(xhr.responseText));
+      } else {
+        reject(new Error('Upload failed'));
+      }
+    });
+
+    xhr.open('POST', `https://api.cocobase.buzz/storage/files/${projectId}`);
+
+    const formData = new FormData();
+    formData.append('file', file);
+
+    xhr.send(formData);
+  });
+}
+
+// Usage
+const result = await uploadWithProgress(file, (percent) => {
+  console.log(`Upload progress: ${percent.toFixed(0)}%`);
+  progressBar.style.width = `${percent}%`;
+});
+```
+</Tab>
+
+<Tab title="Dart">
+```dart
+import 'package:dio/dio.dart';
+
+Future<String> uploadWithProgress(File file, Function(int) onProgress) async {
+  final dio = Dio();
+
+  final formData = FormData.fromMap({
+    'file': await MultipartFile.fromFile(file.path),
+  });
+
+  final response = await dio.post(
+    'https://api.cocobase.buzz/storage/files/$projectId',
+    data: formData,
+    onSendProgress: (sent, total) {
+      final percent = (sent / total * 100).toInt();
+      onProgress(percent);
+    },
+  );
+
+  return response.data['s3_response'];
+}
+
+// Usage
+final url = await uploadWithProgress(file, (percent) {
+  print('Upload progress: $percent%');
+});
+```
+</Tab>
+
+<Tab title="Go">
+```go
+// Upload with progress tracking
+type ProgressReader struct {
+    reader   io.Reader
+    total    int64
+    read     int64
+    callback func(percent float64)
+}
+
+func (pr *ProgressReader) Read(p []byte) (int, error) {
+    n, err := pr.reader.Read(p)
+    pr.read += int64(n)
+
+    if pr.callback != nil {
+        percent := float64(pr.read) / float64(pr.total) * 100
+        pr.callback(percent)
+    }
+
+    return n, err
+}
+
+func uploadWithProgress(client *cocobase.Client, ctx context.Context, file *os.File, filename string, onProgress func(float64)) (string, error) {
+    fileInfo, _ := file.Stat()
+
+    progressReader := &ProgressReader{
+        reader:   file,
+        total:    fileInfo.Size(),
+        callback: onProgress,
+    }
+
+    result, err := client.UploadFile(ctx, progressReader, filename, "")
+    return result.URL, err
+}
+
+// Usage
+url, err := uploadWithProgress(client, ctx, file, "image.jpg", func(percent float64) {
+    fmt.Printf("Upload progress: %.0f%%\n", percent)
+})
+```
+</Tab>
+
+<Tab title="Python">
+```python
+from requests_toolbelt import MultipartEncoder, MultipartEncoderMonitor
+
+def upload_with_progress(file_path, on_progress):
+    with open(file_path, 'rb') as f:
+        encoder = MultipartEncoder({
+            'file': (os.path.basename(file_path), f, 'application/octet-stream')
+        })
+
+        monitor = MultipartEncoderMonitor(encoder, on_progress)
+
+        response = requests.post(
+            f'{BASE_URL}/storage/files/{PROJECT_ID}',
+            data=monitor,
+            headers={'Content-Type': monitor.content_type}
+        )
+
+        return response.json()
+
+def progress_callback(monitor):
+    percent = (monitor.bytes_read / monitor.len) * 100
+    print(f"Upload progress: {percent:.0f}%")
+
+# Usage
+result = upload_with_progress('/path/to/file.jpg', progress_callback)
+print(f"File URL: {result['s3_response']}")
+```
+</Tab>
+
+<Tab title="HTTP">
+```bash
+# Use curl with progress bar
+curl -X POST https://api.cocobase.buzz/storage/files/your-project-id \
+  -F "file=@/path/to/large-file.mp4" \
+  --progress-bar
+```
+</Tab>
+</Tabs>
+
+### Upload Multiple Files
+
+<Tabs>
+<Tab title="JavaScript">
+```javascript
+async function uploadMultipleFiles(files) {
+  const uploads = files.map(file => db.storage.upload(file, 'uploads'));
+  const results = await Promise.all(uploads);
+
+  return results.map(r => r.url);
+}
+
+// Usage
+const fileInput = document.querySelector('input[type="file"][multiple]');
+const files = Array.from(fileInput.files);
+const urls = await uploadMultipleFiles(files);
+
+console.log('Uploaded files:', urls);
+```
+</Tab>
+
+<Tab title="Dart">
+```dart
+Future<List<String>> uploadMultipleFiles(List<File> files) async {
+  final uploads = files.map((file) => db.storage.upload(file, directory: 'uploads'));
+  final results = await Future.wait(uploads);
+
+  return results.map((r) => r.url).toList();
+}
+
+// Usage
+final files = [
+  File('/path/to/file1.jpg'),
+  File('/path/to/file2.jpg'),
+  File('/path/to/file3.jpg'),
+];
+
+final urls = await uploadMultipleFiles(files);
+print('Uploaded files: $urls');
+```
+</Tab>
+
+<Tab title="Go">
+```go
+func uploadMultipleFiles(client *cocobase.Client, ctx context.Context, filePaths []string) ([]string, error) {
+    var urls []string
+    var wg sync.WaitGroup
+    var mu sync.Mutex
+    errChan := make(chan error, len(filePaths))
+
+    for _, path := range filePaths {
+        wg.Add(1)
+
+        go func(p string) {
+            defer wg.Done()
+
+            file, err := os.Open(p)
+            if err != nil {
+                errChan <- err
+                return
+            }
+            defer file.Close()
+
+            result, err := client.UploadFile(ctx, file, filepath.Base(p), "uploads")
+            if err != nil {
+                errChan <- err
+                return
+            }
+
+            mu.Lock()
+            urls = append(urls, result.URL)
+            mu.Unlock()
+        }(path)
+    }
+
+    wg.Wait()
+    close(errChan)
+
+    if len(errChan) > 0 {
+        return urls, <-errChan
+    }
+
+    return urls, nil
+}
+
+// Usage
+urls, err := uploadMultipleFiles(client, ctx, []string{
+    "/path/to/file1.jpg",
+    "/path/to/file2.jpg",
+    "/path/to/file3.jpg",
+})
+```
+</Tab>
+
+<Tab title="Python">
+```python
+import concurrent.futures
+
+def upload_file(file_path):
+    with open(file_path, 'rb') as f:
+        files = {'file': f}
+        data = {'directory': 'uploads'}
+
+        response = requests.post(
+            f'{BASE_URL}/storage/files/{PROJECT_ID}',
+            files=files,
+            data=data
+        )
+
+        return response.json()['s3_response']
+
+def upload_multiple_files(file_paths):
+    with concurrent.futures.ThreadPoolExecutor(max_workers=5) as executor:
+        urls = list(executor.map(upload_file, file_paths))
+
+    return urls
+
+# Usage
+file_paths = [
+    '/path/to/file1.jpg',
+    '/path/to/file2.jpg',
+    '/path/to/file3.jpg'
+]
+
+urls = upload_multiple_files(file_paths)
+print(f"Uploaded files: {urls}")
+```
+</Tab>
+
+<Tab title="HTTP">
+```bash
+# Upload files sequentially
+for file in file1.jpg file2.jpg file3.jpg; do
+  curl -X POST https://api.cocobase.buzz/storage/files/your-project-id \
+    -F "file=@$file" \
+    -F "directory=uploads"
+done
+```
+</Tab>
+</Tabs>
+
+---
+
+## Download Files
+
+Retrieve and download files from storage.
+
+<Tabs>
+<Tab title="JavaScript">
+```javascript
+// Files are accessible via their URL
+const fileUrl = result.url;
+
+// Download programmatically
+async function downloadFile(url, filename) {
+  const response = await fetch(url);
+  const blob = await response.blob();
+
+  const link = document.createElement('a');
+  link.href = URL.createObjectURL(blob);
+  link.download = filename;
+  link.click();
+}
+
+// Usage
+downloadFile(fileUrl, 'downloaded-file.jpg');
+```
+</Tab>
+
+<Tab title="Dart">
+```dart
+import 'package:dio/dio.dart';
+import 'dart:io';
+
+Future<void> downloadFile(String url, String savePath) async {
+  final dio = Dio();
+
+  await dio.download(
+    url,
+    savePath,
+    onReceiveProgress: (received, total) {
+      if (total != -1) {
+        print('${(received / total * 100).toStringAsFixed(0)}%');
+      }
+    },
+  );
+
+  print('File downloaded to: $savePath');
+}
+
+// Usage
+await downloadFile(fileUrl, '/path/to/save/file.jpg');
+```
+</Tab>
+
+<Tab title="Go">
+```go
+import (
+    "io"
+    "net/http"
+    "os"
+)
+
+func downloadFile(url, filepath string) error {
+    resp, err := http.Get(url)
+    if err != nil {
+        return err
+    }
+    defer resp.Body.Close()
+
+    out, err := os.Create(filepath)
+    if err != nil {
+        return err
+    }
+    defer out.Close()
+
+    _, err = io.Copy(out, resp.Body)
+    return err
+}
+
+// Usage
+err := downloadFile(fileURL, "/path/to/save/file.jpg")
+if err != nil {
+    log.Fatal(err)
+}
+```
+</Tab>
+
+<Tab title="Python">
+```python
+import requests
+
+def download_file(url, save_path):
+    response = requests.get(url, stream=True)
+    response.raise_for_status()
+
+    with open(save_path, 'wb') as f:
+        for chunk in response.iter_content(chunk_size=8192):
+            f.write(chunk)
+
+    print(f"File downloaded to: {save_path}")
+
+# Usage
+download_file(file_url, '/path/to/save/file.jpg')
+```
+</Tab>
+
+<Tab title="HTTP">
+```bash
+# Download file using curl
+curl -o downloaded-file.jpg "https://your-bucket.s3.amazonaws.com/path/to/file.jpg"
+
+# Download with wget
+wget -O downloaded-file.jpg "https://your-bucket.s3.amazonaws.com/path/to/file.jpg"
+```
+</Tab>
+</Tabs>
+
+---
+
+## Delete Files
+
+Remove files from storage permanently.
+
+<Tabs>
+<Tab title="JavaScript">
+```javascript
+// Delete a file
+await db.storage.delete('filename.jpg');
+
+// Delete from a specific directory
+await db.storage.delete('filename.jpg', 'avatars');
+
+console.log('File deleted');
+```
+</Tab>
+
+<Tab title="Dart">
+```dart
+// Delete a file
+await db.storage.delete('filename.jpg');
+
+// Delete from a specific directory
+await db.storage.delete('filename.jpg', directory: 'avatars');
+
+print('File deleted');
+```
+</Tab>
+
+<Tab title="Go">
+```go
+// Delete a file
+err := client.DeleteFile(ctx, projectID, "filename.jpg", "")
+
+// Delete from a specific directory
+err = client.DeleteFile(ctx, projectID, "filename.jpg", "avatars")
+
+fmt.Println("File deleted")
+```
+</Tab>
+
+<Tab title="Python">
+```python
+# Delete a file
+params = {'filename': 'filename.jpg'}
+response = requests.delete(
+    f'{BASE_URL}/storage/files/{PROJECT_ID}',
+    params=params
+)
+
+# Delete from a specific directory
+params = {'filename': 'filename.jpg', 'directory': 'avatars'}
+response = requests.delete(
+    f'{BASE_URL}/storage/files/{PROJECT_ID}',
+    params=params
+)
+
+print("File deleted")
+```
+</Tab>
+
+<Tab title="HTTP">
+```bash
+# Delete a file
+curl -X DELETE "https://api.cocobase.buzz/storage/files/your-project-id?filename=filename.jpg"
+
+# Delete from a specific directory
+curl -X DELETE "https://api.cocobase.buzz/storage/files/your-project-id?filename=filename.jpg&directory=avatars"
+```
+</Tab>
+</Tabs>
+
+---
+
+## List Files
+
+Retrieve all files in your project storage.
+
+<Tabs>
+<Tab title="JavaScript">
+```javascript
+// List all files
+const files = await db.storage.list();
+console.log('Total files:', files.length);
+
+// List files in a directory
+const avatars = await db.storage.list('avatars');
+console.log('Avatar files:', avatars);
+
+// File information
+files.forEach(file => {
+  console.log('File:', file.key);
+  console.log('Size:', file.size, 'bytes');
+  console.log('URL:', file.url);
+  console.log('Last modified:', file.last_modified);
+});
+```
+</Tab>
+
+<Tab title="Dart">
+```dart
+// List all files
+final files = await db.storage.list();
+print('Total files: ${files.length}');
+
+// List files in a directory
+final avatars = await db.storage.list(directory: 'avatars');
+print('Avatar files: $avatars');
+
+// File information
+for (var file in files) {
+  print('File: ${file.key}');
+  print('Size: ${file.size} bytes');
+  print('URL: ${file.url}');
+  print('Last modified: ${file.lastModified}');
+}
+```
+</Tab>
+
+<Tab title="Go">
+```go
+// List all files
+files, err := client.ListFiles(ctx, projectID, "")
+
+// List files in a directory
+avatars, err := client.ListFiles(ctx, projectID, "avatars")
+
+// File information
+for _, file := range files {
+    fmt.Printf("File: %s\n", file.Key)
+    fmt.Printf("Size: %d bytes\n", file.Size)
+    fmt.Printf("URL: %s\n", file.URL)
+    fmt.Printf("Last modified: %s\n", file.LastModified)
+}
+```
+</Tab>
+
+<Tab title="Python">
+```python
+# List all files
+response = requests.get(f'{BASE_URL}/storage/files/{PROJECT_ID}')
+files = response.json()
+print(f"Total files: {len(files)}")
+
+# List files in a directory
+params = {'directory': 'avatars'}
+response = requests.get(
+    f'{BASE_URL}/storage/files/{PROJECT_ID}',
+    params=params
+)
+avatars = response.json()
+print(f"Avatar files: {len(avatars)}")
+
+# File information
+for file in files:
+    print(f"File: {file['key']}")
+    print(f"Size: {file['size']} bytes")
+    print(f"URL: {file['url']}")
+    print(f"Last modified: {file['last_modified']}")
+```
+</Tab>
+
+<Tab title="HTTP">
+```bash
+# List all files
+curl https://api.cocobase.buzz/storage/files/your-project-id
+
+# List files in a directory
+curl "https://api.cocobase.buzz/storage/files/your-project-id?directory=avatars"
+```
+</Tab>
+</Tabs>
+
+---
+
+## Storage Info
+
+Monitor storage usage and limits.
+
+<Tabs>
+<Tab title="JavaScript">
+```javascript
+const storage = await db.storage.getInfo();
+
+console.log(`Used: ${(storage.used / 1024 / 1024 / 1024).toFixed(2)} GB`);
+console.log(`Total: ${(storage.total / 1024 / 1024 / 1024).toFixed(2)} GB`);
+console.log(`Available: ${(storage.available / 1024 / 1024 / 1024).toFixed(2)} GB`);
+
+const usagePercent = (storage.used / storage.total * 100).toFixed(1);
+console.log(`Usage: ${usagePercent}%`);
+
+if (usagePercent > 90) {
+  console.warn('Storage almost full!');
+}
+```
+</Tab>
+
+<Tab title="Dart">
+```dart
+final storage = await db.storage.getInfo();
+
+final usedGB = (storage.used / 1024 / 1024 / 1024).toStringAsFixed(2);
+final totalGB = (storage.total / 1024 / 1024 / 1024).toStringAsFixed(2);
+final availableGB = (storage.available / 1024 / 1024 / 1024).toStringAsFixed(2);
+
+print('Used: $usedGB GB');
+print('Total: $totalGB GB');
+print('Available: $availableGB GB');
+
+final usagePercent = (storage.used / storage.total * 100).toStringAsFixed(1);
+print('Usage: $usagePercent%');
+
+if (double.parse(usagePercent) > 90) {
+  print('⚠️ Storage almost full!');
+}
+```
+</Tab>
+
+<Tab title="Go">
+```go
+info, err := client.GetStorageInfo(ctx, projectID)
+if err != nil {
+    log.Fatal(err)
+}
+
+usedGB := float64(info.Used) / 1024 / 1024 / 1024
+totalGB := float64(info.Total) / 1024 / 1024 / 1024
+availableGB := float64(info.Available) / 1024 / 1024 / 1024
+
+fmt.Printf("Used: %.2f GB\n", usedGB)
+fmt.Printf("Total: %.2f GB\n", totalGB)
+fmt.Printf("Available: %.2f GB\n", availableGB)
+
+usagePercent := float64(info.Used) / float64(info.Total) * 100
+fmt.Printf("Usage: %.1f%%\n", usagePercent)
+
+if usagePercent > 90 {
+    fmt.Println("⚠️ Storage almost full!")
+}
+```
+</Tab>
+
+<Tab title="Python">
+```python
+response = requests.get(f'{BASE_URL}/storage/storage-info/{PROJECT_ID}')
+storage = response.json()
+
+used_gb = storage['used'] / 1024 / 1024 / 1024
+total_gb = storage['total_storage'] / 1024 / 1024 / 1024
+available_gb = storage['available'] / 1024 / 1024 / 1024
+
+print(f"Used: {used_gb:.2f} GB")
+print(f"Total: {total_gb:.2f} GB")
+print(f"Available: {available_gb:.2f} GB")
+
+usage_percent = (storage['used'] / storage['total_storage']) * 100
+print(f"Usage: {usage_percent:.1f}%")
+
+if usage_percent > 90:
+    print("⚠️ Storage almost full!")
+```
+</Tab>
+
+<Tab title="HTTP">
+```bash
+curl https://api.cocobase.buzz/storage/storage-info/your-project-id
+```
+</Tab>
+</Tabs>
+
+---
+
+## Upload with User Profile
+
+Upload files during user signup or profile updates.
+
+<Tabs>
+<Tab title="JavaScript">
+```javascript
+// Signup with profile picture
+const formData = new FormData();
+formData.append('data', JSON.stringify({
+  email: 'john@example.com',
+  password: 'password123',
+  data: {
+    username: 'johndoe'
+  }
+}));
+formData.append('profile_picture', profilePicFile);
+
+const response = await fetch('https://api.cocobase.buzz/auth-collections/signup', {
+  method: 'POST',
+  headers: {
+    'X-API-Key': 'your-api-key'
+  },
+  body: formData
+});
+
+const user = await response.json();
+console.log('Profile picture:', user.data.profile_picture);
+```
+</Tab>
+
+<Tab title="Dart">
+```dart
+import 'package:dio/dio.dart';
+
+// Signup with profile picture
+final formData = FormData.fromMap({
+  'data': jsonEncode({
+    'email': 'john@example.com',
+    'password': 'password123',
+    'data': {
+      'username': 'johndoe',
+    }
+  }),
+  'profile_picture': await MultipartFile.fromFile(
+    profilePicFile.path,
+    filename: 'profile.jpg',
+  ),
+});
+
+final response = await dio.post(
+  'https://api.cocobase.buzz/auth-collections/signup',
+  data: formData,
+  options: Options(headers: {
+    'X-API-Key': 'your-api-key',
+  }),
+);
+
+print('Profile picture: ${response.data['data']['profile_picture']}');
+```
+</Tab>
+
+<Tab title="Go">
+```go
+// Create multipart request for signup with file
+body := &bytes.Buffer{}
+writer := multipart.NewWriter(body)
+
+// Add JSON data
+dataJSON, _ := json.Marshal(map[string]interface{}{
+    "email":    "john@example.com",
+    "password": "password123",
+    "data": map[string]interface{}{
+        "username": "johndoe",
+    },
+})
+writer.WriteField("data", string(dataJSON))
+
+// Add file
+file, _ := os.Open("/path/to/profile.jpg")
+defer file.Close()
+
+part, _ := writer.CreateFormFile("profile_picture", "profile.jpg")
+io.Copy(part, file)
+
+writer.Close()
+
+// Send request
+req, _ := http.NewRequest("POST", "https://api.cocobase.buzz/auth-collections/signup", body)
+req.Header.Set("Content-Type", writer.FormDataContentType())
+req.Header.Set("X-API-Key", "your-api-key")
+
+client := &http.Client{}
+resp, _ := client.Do(req)
+```
+</Tab>
+
+<Tab title="Python">
+```python
+# Signup with profile picture
+files = {
+    'profile_picture': open('/path/to/profile.jpg', 'rb')
+}
+
+data = {
+    'data': json.dumps({
+        'email': 'john@example.com',
+        'password': 'password123',
+        'data': {
+            'username': 'johndoe'
+        }
+    })
+}
+
+response = requests.post(
+    f'{BASE_URL}/auth-collections/signup',
+    headers={'X-API-Key': API_KEY},
+    files=files,
+    data=data
+)
+
+user = response.json()
+print(f"Profile picture: {user['data']['profile_picture']}")
+```
+</Tab>
+
+<Tab title="HTTP">
+```bash
+curl -X POST https://api.cocobase.buzz/auth-collections/signup \
+  -H "X-API-Key: your-api-key" \
+  -F 'data={"email":"john@example.com","password":"password123","data":{"username":"johndoe"}}' \
+  -F "profile_picture=@/path/to/profile.jpg"
+```
+</Tab>
+</Tabs>
+
+---
+
+## Image Optimization
+
+Automatically optimize images for better performance.
+
+<Tabs>
+<Tab title="JavaScript">
+```javascript
+async function optimizeAndUpload(file, maxWidth = 1200, quality = 0.8) {
+  // Create canvas for resizing
+  const canvas = document.createElement('canvas');
+  const ctx = canvas.getContext('2d');
+
+  // Load image
+  const img = await createImageBitmap(file);
+
+  // Calculate dimensions
+  let width = img.width;
+  let height = img.height;
+
+  if (width > maxWidth) {
+    height = (height * maxWidth) / width;
+    width = maxWidth;
+  }
+
+  canvas.width = width;
+  canvas.height = height;
+
+  // Draw resized image
+  ctx.drawImage(img, 0, 0, width, height);
+
+  // Convert to blob
+  const blob = await new Promise(resolve => {
+    canvas.toBlob(resolve, 'image/jpeg', quality);
+  });
+
+  // Upload optimized image
+  const optimizedFile = new File([blob], file.name, {
+    type: 'image/jpeg'
+  });
+
+  return await db.storage.upload(optimizedFile, 'images');
+}
+
+// Usage
+const result = await optimizeAndUpload(originalImage);
+console.log('Optimized image URL:', result.url);
+```
+</Tab>
+
+<Tab title="Dart">
+```dart
+import 'package:image/image.dart' as img;
+import 'dart:io';
+
+Future<String> optimizeAndUpload(File file, {int maxWidth = 1200, int quality = 80}) async {
+  // Read and decode image
+  final bytes = await file.readAsBytes();
+  final image = img.decodeImage(bytes);
+
+  if (image == null) {
+    throw Exception('Failed to decode image');
+  }
+
+  // Resize if needed
+  img.Image resized = image;
+  if (image.width > maxWidth) {
+    resized = img.copyResize(image, width: maxWidth);
+  }
+
+  // Encode as JPEG with quality
+  final optimized = img.encodeJpg(resized, quality: quality);
+
+  // Save to temporary file
+  final tempFile = File('${file.parent.path}/optimized_${file.name}');
+  await tempFile.writeAsBytes(optimized);
+
+  // Upload
+  final result = await db.storage.upload(tempFile, directory: 'images');
+
+  // Clean up
+  await tempFile.delete();
+
+  return result.url;
+}
+
+// Usage
+final url = await optimizeAndUpload(originalImage);
+print('Optimized image URL: $url');
+```
+</Tab>
+
+<Tab title="Go">
+```go
+import (
+    "image"
+    "image/jpeg"
+    "golang.org/x/image/draw"
+)
+
+func optimizeAndUpload(client *cocobase.Client, ctx context.Context, filepath string, maxWidth int, quality int) (string, error) {
+    // Open original image
+    file, err := os.Open(filepath)
+    if err != nil {
+        return "", err
+    }
+    defer file.Close()
+
+    // Decode image
+    img, _, err := image.Decode(file)
+    if err != nil {
+        return "", err
+    }
+
+    // Resize if needed
+    bounds := img.Bounds()
+    width := bounds.Dx()
+    height := bounds.Dy()
+
+    if width > maxWidth {
+        height = height * maxWidth / width
+        width = maxWidth
+    }
+
+    // Create resized image
+    resized := image.NewRGBA(image.Rect(0, 0, width, height))
+    draw.BiLinear.Scale(resized, resized.Bounds(), img, bounds, draw.Over, nil)
+
+    // Save to temporary file
+    tmpFile, _ := os.CreateTemp("", "optimized-*.jpg")
+    defer tmpFile.Close()
+
+    // Encode as JPEG
+    jpeg.Encode(tmpFile, resized, &jpeg.Options{Quality: quality})
+
+    // Upload
+    tmpFile.Seek(0, 0)
+    result, err := client.UploadFile(ctx, tmpFile, "optimized.jpg", "images")
+
+    return result.URL, err
+}
+
+// Usage
+url, err := optimizeAndUpload(client, ctx, "/path/to/image.jpg", 1200, 80)
+fmt.Printf("Optimized image URL: %s\n", url)
+```
+</Tab>
+
+<Tab title="Python">
+```python
+from PIL import Image
+import io
+
+def optimize_and_upload(file_path, max_width=1200, quality=80):
+    # Open and resize image
+    with Image.open(file_path) as img:
+        # Calculate new dimensions
+        if img.width > max_width:
+            ratio = max_width / img.width
+            new_height = int(img.height * ratio)
+            img = img.resize((max_width, new_height), Image.LANCZOS)
+
+        # Convert to RGB if needed
+        if img.mode in ('RGBA', 'P'):
+            img = img.convert('RGB')
+
+        # Save to bytes
+        buffer = io.BytesIO()
+        img.save(buffer, format='JPEG', quality=quality, optimize=True)
+        buffer.seek(0)
+
+        # Upload
+        files = {'file': ('optimized.jpg', buffer, 'image/jpeg')}
+        data = {'directory': 'images'}
+
+        response = requests.post(
+            f'{BASE_URL}/storage/files/{PROJECT_ID}',
+            files=files,
+            data=data
+        )
+
+        return response.json()['s3_response']
+
+# Usage
+url = optimize_and_upload('/path/to/original.jpg')
+print(f"Optimized image URL: {url}")
+```
+</Tab>
+
+<Tab title="HTTP">
+```bash
+# Use ImageMagick to optimize before upload
+convert original.jpg -resize 1200x -quality 80 optimized.jpg
+
+curl -X POST https://api.cocobase.buzz/storage/files/your-project-id \
+  -F "file=@optimized.jpg" \
+  -F "directory=images"
+```
+</Tab>
+</Tabs>
+
+---
+
+## Best Practices
+
+<AccordionGroup>
+<Accordion title="1. Validate Files Client-Side">
+Check file type and size before uploading to save bandwidth.
+
+```javascript
+// ✓ Good: Validate before upload
+function validateImage(file) {
+  const allowedTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
+  const maxSize = 5 * 1024 * 1024; // 5MB
+
+  if (!allowedTypes.includes(file.type)) {
+    throw new Error('Invalid file type');
+  }
+
+  if (file.size > maxSize) {
+    throw new Error('File too large (max 5MB)');
+  }
+
+  return true;
+}
+```
+</Accordion>
+
+<Accordion title="2. Organize Files by Directory">
+Use directories to keep files organized and manageable.
+
+```javascript
+// ✓ Good: Organized structure
+await db.storage.upload(profilePic, 'users/avatars');
+await db.storage.upload(document, 'documents/invoices');
+await db.storage.upload(postImage, 'posts/images');
+
+// ✗ Bad: Everything in root
+await db.storage.upload(file);
+```
+</Accordion>
+
+<Accordion title="3. Delete Old Files When Updating">
+Remove old files to save storage space.
+
+```javascript
+// ✓ Good: Delete old file
+if (user.data.profile_picture) {
+  const oldFilename = user.data.profile_picture.split('/').pop();
+  await db.storage.delete(oldFilename, 'users/avatars');
+}
+
+await db.storage.upload(newAvatar, 'users/avatars');
+```
+</Accordion>
+
+<Accordion title="4. Monitor Storage Usage">
+Check storage before large uploads to avoid failures.
+
+```javascript
+// ✓ Good: Check before upload
+const storage = await db.storage.getInfo();
+const usagePercent = (storage.used / storage.total) * 100;
+
+if (usagePercent > 90) {
+  throw new Error('Storage almost full');
+}
+
+if (fileSize > storage.available) {
+  throw new Error('Not enough storage space');
+}
+```
+</Accordion>
+
+<Accordion title="5. Optimize Images">
+Compress and resize images before upload for better performance.
+
+```javascript
+// ✓ Good: Optimize before upload
+const optimized = await optimizeImage(originalImage, 1200, 0.8);
+await db.storage.upload(optimized);
+
+// ✗ Bad: Upload large original
+await db.storage.upload(originalImage); // 10MB uncompressed
+```
+</Accordion>
+
+<Accordion title="6. Handle Upload Errors">
+Always implement error handling for file uploads.
+
+```javascript
+// ✓ Good: Error handling
+try {
+  const result = await db.storage.upload(file);
+  console.log('Success:', result.url);
+} catch (error) {
+  if (error.message.includes('storage limit')) {
+    showError('Storage full. Please upgrade your plan.');
+  } else if (error.message.includes('file type')) {
+    showError('Invalid file type.');
+  } else {
+    showError('Upload failed. Please try again.');
+  }
+}
+```
+</Accordion>
+</AccordionGroup>
+
+---
+
+## Storage Limits
+
+| Plan       | Storage Limit |
+| ---------- | ------------- |
+| Free       | 1 GB          |
+| Starter    | 10 GB         |
+| Pro        | 100 GB        |
+| Enterprise | Custom        |
+
+<Warning>
+  Storage limits are enforced at upload time. You'll receive an error if you
+  exceed your plan's limit.
+</Warning>
+
+---
+
+## Supported File Types
+
+Cocobase supports all file types:
+
+- **Images** - JPEG, PNG, GIF, WebP, SVG
+- **Documents** - PDF, DOC, DOCX, XLS, XLSX, PPT, PPTX
+- **Media** - MP4, MP3, WAV, AVI, MOV
+- **Archives** - ZIP, RAR, TAR, GZ
+- **Code** - JS, HTML, CSS, JSON, XML
+
+**Recommended max file sizes:**
+
+- Images: 5 MB
+- Documents: 10 MB
+- Videos: 50 MB
+- Archives: 100 MB
+
+---
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Authentication" icon="shield" href="/features/authentication">
+    Upload files during user signup
+  </Card>
+  <Card title="CRUD Operations" icon="database" href="/features/crud-operations">
+    Store file URLs in documents
+  </Card>
+  <Card title="Real-time Updates" icon="bolt" href="/features/realtime">
+    Watch file-related document changes
+  </Card>
+  <Card title="Relationships" icon="link" href="/features/relationships">
+    Link files to users and documents
+  </Card>
+</CardGroup>

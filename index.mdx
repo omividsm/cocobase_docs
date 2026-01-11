@@ -1,7 +1,6 @@
 ---
-sidebar_position: 1
-title: Welcome To CocoBase
-slug: /
+title: Welcome To Cocobase
+description: The Backend That Just Works - Build faster, ship sooner, scale effortlessly
 ---
 
 # Cocobase - The Backend That Just Works
@@ -17,7 +16,7 @@ Cocobase is a modern Backend-as-a-Service (BaaS) platform that eliminates the co
 Go from idea to MVP in minutes, not weeks. No server configuration, no database setup, no authentication headaches.
 
 <Tabs>
-  <Tab title="JavaScript"> 
+  <Tab title="JavaScript">
     ```typescript 
     import { Cocobase } from "cocobase";
 
@@ -28,6 +27,7 @@ Go from idea to MVP in minutes, not weeks. No server configuration, no database 
       name: "John"
     });
     ```
+
   </Tab>
 
   <Tab title="Dart">
@@ -50,9 +50,10 @@ Go from idea to MVP in minutes, not weeks. No server configuration, no database 
       });
     }
     ```
+
   </Tab>
 
-  <Tab title="Go"> 
+  <Tab title="Go">
     ```go 
     import "github.com/cocobase/cocobase-go"
 
@@ -68,6 +69,7 @@ Go from idea to MVP in minutes, not weeks. No server configuration, no database 
       "name": "John",
     })
     ```
+
   </Tab>
 
   <Tab title="Python">
@@ -81,11 +83,12 @@ Go from idea to MVP in minutes, not weeks. No server configuration, no database 
         "name": "John"
     })
     ```
+
   </Tab>
 
-  <Tab title="http"> 
-    ```http 
-    POST /collections/users 
+  <Tab title="HTTP">
+    ```http
+    POST /collections/users
     Authorization: Bearer YOUR_API_KEY
     Content-Type: application/json
 
@@ -93,6 +96,7 @@ Go from idea to MVP in minutes, not weeks. No server configuration, no database 
       "name": "John"
     }
     ```
+
   </Tab>
 </Tabs>
 
@@ -114,14 +118,12 @@ Built-in user management that actually works. Registration, login, sessions, and
     ```
   </Tab>
 
-  <Tab title="Dart">
-    ```dart
-    await db.register(
-      email: 'user@example.com',
-      password: 'SecurePassword123!',
-    );
-    ```
-  </Tab>
+{" "}
+
+<Tab title="Dart">
+  ```dart await db.register( email: 'user@example.com', password:
+  'SecurePassword123!', ); ```
+</Tab>
 
   <Tab title="Go">
     ```go
@@ -131,9 +133,10 @@ Built-in user management that actually works. Registration, login, sessions, and
         log.Fatal(err)
     }
     ```
+
   </Tab>
 
-  <Tab title="http">
+  <Tab title="HTTP">
     ```http
     POST /auth/register
     Authorization: Bearer PROJECT_API_KEY
@@ -148,6 +151,7 @@ Built-in user management that actually works. Registration, login, sessions, and
       }
     }
     ```
+
   </Tab>
 </Tabs>
 
@@ -270,7 +274,7 @@ Store and visualize application metrics and user data.
     ```
   </Tab>
 
-  <Tab title="Dart"> 
+  <Tab title="Dart">
     ```dart 
     // Track user events 
     await db.createDocument("events", { 
@@ -284,7 +288,7 @@ Store and visualize application metrics and user data.
     ``` 
   </Tab>
 
-  <Tab title="Go"> 
+  <Tab title="Go">
     ```go 
     // Track user events
     db.CreateDocument("events", 
@@ -299,10 +303,10 @@ Store and visualize application metrics and user data.
     ``` 
   </Tab>
 
-  <Tab title="http"> 
-    ```http 
-    POST /collections/events 
-    Authorization: Bearer <token>
+  <Tab title="HTTP">
+    ```http
+    POST /collections/events
+    Authorization: Bearer YOUR_TOKEN
     Content-Type: application/json
 
     {
@@ -314,6 +318,7 @@ Store and visualize application metrics and user data.
       }
     }
     ```
+
   </Tab>
 </Tabs>
 
@@ -410,12 +415,8 @@ Cocobase is crafted by developers, for developers. We understand the pain of bac
 
 ---
 
-<div align="center">
-
-### Ready to eliminate backend complexity forever?
+## Ready to eliminate backend complexity forever?
 
 **[Start Building Now →](https://cocobase.buzz)**
 
 _Free tier available. No credit card required._
-
-</div>

@@ -1,0 +1,1460 @@
+---
+title: "Query & Filtering"
+description: "Advanced filtering, searching, and querying across all platforms"
+---
+
+# Query & Filtering
+
+Master advanced query techniques including filtering, searching, sorting, and pagination with powerful operators across all platforms.
+
+<Note>
+  Cocobase provides a comprehensive query system with support for complex
+  filters, logical operators, and efficient pagination.
+</Note>
+
+## Overview
+
+Build powerful queries with:
+
+- **Comparison operators** - Equal, not equal, greater than, less than
+- **String operators** - Contains, starts with, ends with, regex
+- **List operators** - In, not in
+- **Logical operators** - AND, OR, NOT combinations
+- **Sorting** - Order results by any field
+- **Pagination** - Limit and offset for large datasets
+- **Query builder** - Fluent, chainable API
+
+---
+
+## Basic Filtering
+
+Filter documents by field values with automatic type handling.
+
+### Equality Filters
+
+<Tabs>
+<Tab title="JavaScript">
+```javascript
+import { Cocobase } from 'cocobase';
+
+const db = new Cocobase({ apiKey: 'your-api-key' });
+
+// Simple equality
+const activeUsers = await db.listDocuments('users', {
+  filters: { status: 'active' }
+});
+
+// Multiple filters (AND logic)
+const specificUsers = await db.listDocuments('users', {
+  filters: {
+    status: 'active',
+    role: 'admin',
+    verified: true
+  }
+});
+```
+</Tab>
+
+<Tab title="Dart">
+```dart
+import 'package:cocobase/cocobase.dart';
+
+final db = Cocobase(CocobaseConfig(apiKey: 'your-api-key'));
+
+// Simple equality
+final activeUsers = await db.listDocuments('users', filters: {
+  'status': 'active',
+});
+
+// Multiple filters (AND logic)
+final specificUsers = await db.listDocuments('users', filters: {
+  'status': 'active',
+  'role': 'admin',
+  'verified': true,
+});
+```
+</Tab>
+
+<Tab title="Go">
+```go
+package main
+
+import (
+    "context"
+    "github.com/lordace-coder/cocobase-go/cocobase"
+)
+
+func main() {
+    client := cocobase.NewClient(cocobase.Config{
+        APIKey: "your-api-key",
+    })
+
+    ctx := context.Background()
+
+    // Simple equality
+    query := cocobase.NewQuery().Where("status", "active")
+    activeUsers, _ := client.ListDocuments(ctx, "users", query)
+
+    // Multiple filters (AND logic)
+    query = cocobase.NewQuery().
+        Where("status", "active").
+        Where("role", "admin").
+        Where("verified", true)
+    specificUsers, _ := client.ListDocuments(ctx, "users", query)
+}
+```
+</Tab>
+
+<Tab title="Python">
+```python
+import requests
+
+API_KEY = 'your-api-key'
+BASE_URL = 'https://api.cocobase.buzz'
+headers = {'X-API-Key': API_KEY}
+
+# Simple equality
+params = {'status': 'active'}
+response = requests.get(
+    f'{BASE_URL}/collections/users/documents',
+    headers=headers,
+    params=params
+)
+
+# Multiple filters (AND logic)
+params = {
+    'status': 'active',
+    'role': 'admin',
+    'verified': 'true'
+}
+response = requests.get(
+    f'{BASE_URL}/collections/users/documents',
+    headers=headers,
+    params=params
+)
+```
+</Tab>
+
+<Tab title="HTTP">
+```bash
+# Simple equality
+curl "https://api.cocobase.buzz/collections/users/documents?status=active" \
+  -H "X-API-Key: your-api-key"
+
+# Multiple filters (AND logic)
+curl "https://api.cocobase.buzz/collections/users/documents?status=active&role=admin&verified=true" \
+  -H "X-API-Key: your-api-key"
+```
+</Tab>
+</Tabs>
+
+---
+
+## Query Operators
+
+### Comparison Operators
+
+Filter by numeric ranges and comparisons.
+
+<Tabs>
+<Tab title="JavaScript">
+```javascript
+// Greater than
+const seniors = await db.listDocuments('users', {
+  filters: { age_gt: 65 }
+});
+
+// Greater than or equal
+const adults = await db.listDocuments('users', {
+  filters: { age_gte: 18 }
+});
+
+// Less than
+const minors = await db.listDocuments('users', {
+  filters: { age_lt: 18 }
+});
+
+// Less than or equal
+const eligible = await db.listDocuments('users', {
+  filters: { age_lte: 65 }
+});
+
+// Not equal
+const nonAdmins = await db.listDocuments('users', {
+  filters: { role_ne: 'admin' }
+});
+
+// Between (range)
+const midAge = await db.listDocuments('users', {
+  filters: {
+    age_gte: 25,
+    age_lte: 40
+  }
+});
+```
+</Tab>
+
+<Tab title="Dart">
+```dart
+// Greater than
+final seniors = await db.listDocuments('users', filters: {
+  'age__gt': 65,
+});
+
+// Greater than or equal
+final adults = await db.listDocuments('users',
+  queryBuilder: QueryBuilder().whereGreaterThanOrEqual('age', 18)
+);
+
+// Less than
+final minors = await db.listDocuments('users',
+  queryBuilder: QueryBuilder().whereLessThan('age', 18)
+);
+
+// Less than or equal
+final eligible = await db.listDocuments('users',
+  queryBuilder: QueryBuilder().whereLessThanOrEqual('age', 65)
+);
+
+// Not equal
+final nonAdmins = await db.listDocuments('users',
+  queryBuilder: QueryBuilder().whereNotEqual('role', 'admin')
+);
+
+// Between (range)
+final midAge = await db.listDocuments('users', filters: {
+  'age__gte': 25,
+  'age__lte': 40,
+});
+```
+</Tab>
+
+<Tab title="Go">
+```go
+// Greater than
+query := cocobase.NewQuery().GreaterThan("age", 65)
+seniors, _ := client.ListDocuments(ctx, "users", query)
+
+// Greater than or equal
+query = cocobase.NewQuery().GreaterThanOrEqual("age", 18)
+adults, _ := client.ListDocuments(ctx, "users", query)
+
+// Less than
+query = cocobase.NewQuery().LessThan("age", 18)
+minors, _ := client.ListDocuments(ctx, "users", query)
+
+// Less than or equal
+query = cocobase.NewQuery().LessThanOrEqual("age", 65)
+eligible, _ := client.ListDocuments(ctx, "users", query)
+
+// Not equal
+query = cocobase.NewQuery().NotEquals("role", "admin")
+nonAdmins, _ := client.ListDocuments(ctx, "users", query)
+
+// Between (range)
+query = cocobase.NewQuery().Between("age", 25, 40)
+midAge, _ := client.ListDocuments(ctx, "users", query)
+```
+</Tab>
+
+<Tab title="Python">
+```python
+# Greater than
+params = {'age_gt': 65}
+seniors = requests.get(
+    f'{BASE_URL}/collections/users/documents',
+    headers=headers,
+    params=params
+).json()
+
+# Greater than or equal
+params = {'age_gte': 18}
+adults = requests.get(
+    f'{BASE_URL}/collections/users/documents',
+    headers=headers,
+    params=params
+).json()
+
+# Less than
+params = {'age_lt': 18}
+minors = requests.get(
+    f'{BASE_URL}/collections/users/documents',
+    headers=headers,
+    params=params
+).json()
+
+# Less than or equal
+params = {'age_lte': 65}
+eligible = requests.get(
+    f'{BASE_URL}/collections/users/documents',
+    headers=headers,
+    params=params
+).json()
+
+# Not equal
+params = {'role_ne': 'admin'}
+non_admins = requests.get(
+    f'{BASE_URL}/collections/users/documents',
+    headers=headers,
+    params=params
+).json()
+
+# Between (range)
+params = {'age_gte': 25, 'age_lte': 40}
+mid_age = requests.get(
+    f'{BASE_URL}/collections/users/documents',
+    headers=headers,
+    params=params
+).json()
+```
+</Tab>
+
+<Tab title="HTTP">
+```bash
+# Greater than
+curl "https://api.cocobase.buzz/collections/users/documents?age_gt=65" \
+  -H "X-API-Key: your-api-key"
+
+# Greater than or equal
+curl "https://api.cocobase.buzz/collections/users/documents?age_gte=18" \
+  -H "X-API-Key: your-api-key"
+
+# Less than
+curl "https://api.cocobase.buzz/collections/users/documents?age_lt=18" \
+  -H "X-API-Key: your-api-key"
+
+# Less than or equal
+curl "https://api.cocobase.buzz/collections/users/documents?age_lte=65" \
+  -H "X-API-Key: your-api-key"
+
+# Not equal
+curl "https://api.cocobase.buzz/collections/users/documents?role_ne=admin" \
+  -H "X-API-Key: your-api-key"
+
+# Between (range)
+curl "https://api.cocobase.buzz/collections/users/documents?age_gte=25&age_lte=40" \
+  -H "X-API-Key: your-api-key"
+```
+</Tab>
+</Tabs>
+
+### String Operators
+
+Search and filter text fields with powerful string operations.
+
+<Tabs>
+<Tab title="JavaScript">
+```javascript
+// Contains (case-insensitive)
+const johns = await db.listDocuments('users', {
+  filters: { name_contains: 'john' }
+});
+
+// Starts with
+const admins = await db.listDocuments('users', {
+  filters: { email_startswith: 'admin' }
+});
+
+// Ends with
+const gmailUsers = await db.listDocuments('users', {
+  filters: { email_endswith: '@gmail.com' }
+});
+
+// Multiple string filters
+const specific = await db.listDocuments('users', {
+  filters: {
+    name_contains: 'john',
+    email_endswith: '@example.com'
+  }
+});
+```
+</Tab>
+
+<Tab title="Dart">
+```dart
+// Contains (case-insensitive)
+final johns = await db.listDocuments('users',
+  queryBuilder: QueryBuilder().whereContains('name', 'john')
+);
+
+// Starts with
+final admins = await db.listDocuments('users',
+  queryBuilder: QueryBuilder().whereStartsWith('email', 'admin')
+);
+
+// Ends with
+final gmailUsers = await db.listDocuments('users',
+  queryBuilder: QueryBuilder().whereEndsWith('email', '@gmail.com')
+);
+
+// Multiple string filters
+final specific = await db.listDocuments('users',
+  queryBuilder: QueryBuilder()
+    .whereContains('name', 'john')
+    .whereEndsWith('email', '@example.com')
+);
+```
+</Tab>
+
+<Tab title="Go">
+```go
+// Contains (case-insensitive)
+query := cocobase.NewQuery().Contains("name", "john")
+johns, _ := client.ListDocuments(ctx, "users", query)
+
+// Starts with
+query = cocobase.NewQuery().StartsWith("email", "admin")
+admins, _ := client.ListDocuments(ctx, "users", query)
+
+// Ends with
+query = cocobase.NewQuery().EndsWith("email", "@gmail.com")
+gmailUsers, _ := client.ListDocuments(ctx, "users", query)
+
+// Multiple string filters
+query = cocobase.NewQuery().
+    Contains("name", "john").
+    EndsWith("email", "@example.com")
+specific, _ := client.ListDocuments(ctx, "users", query)
+```
+</Tab>
+
+<Tab title="Python">
+```python
+# Contains (case-insensitive)
+params = {'name_contains': 'john'}
+johns = requests.get(
+    f'{BASE_URL}/collections/users/documents',
+    headers=headers,
+    params=params
+).json()
+
+# Starts with
+params = {'email_startswith': 'admin'}
+admins = requests.get(
+    f'{BASE_URL}/collections/users/documents',
+    headers=headers,
+    params=params
+).json()
+
+# Ends with
+params = {'email_endswith': '@gmail.com'}
+gmail_users = requests.get(
+    f'{BASE_URL}/collections/users/documents',
+    headers=headers,
+    params=params
+).json()
+
+# Multiple string filters
+params = {
+    'name_contains': 'john',
+    'email_endswith': '@example.com'
+}
+specific = requests.get(
+    f'{BASE_URL}/collections/users/documents',
+    headers=headers,
+    params=params
+).json()
+```
+</Tab>
+
+<Tab title="HTTP">
+```bash
+# Contains (case-insensitive)
+curl "https://api.cocobase.buzz/collections/users/documents?name_contains=john" \
+  -H "X-API-Key: your-api-key"
+
+# Starts with
+curl "https://api.cocobase.buzz/collections/users/documents?email_startswith=admin" \
+  -H "X-API-Key: your-api-key"
+
+# Ends with
+curl "https://api.cocobase.buzz/collections/users/documents?email_endswith=@gmail.com" \
+  -H "X-API-Key: your-api-key"
+
+# Multiple string filters
+curl "https://api.cocobase.buzz/collections/users/documents?name_contains=john&email_endswith=@example.com" \
+  -H "X-API-Key: your-api-key"
+```
+</Tab>
+</Tabs>
+
+### List Operators
+
+Filter by multiple possible values.
+
+<Tabs>
+<Tab title="JavaScript">
+```javascript
+// In - match any of the values
+const staff = await db.listDocuments('users', {
+  filters: { role_in: 'admin,moderator,support' }
+});
+
+// Not in - exclude values
+const active = await db.listDocuments('users', {
+  filters: { status_notin: 'deleted,banned,suspended' }
+});
+
+// Array contains (for array fields)
+const followers = await db.listDocuments('users', {
+  filters: { 'followers_array_contains': 'user_123' }
+});
+```
+</Tab>
+
+<Tab title="Dart">
+```dart
+// In - match any of the values
+final staff = await db.listDocuments('users',
+  queryBuilder: QueryBuilder().whereIn('role', 'admin,moderator,support')
+);
+
+// Not in - exclude values
+final active = await db.listDocuments('users',
+  queryBuilder: QueryBuilder().whereNotIn('status', 'deleted,banned,suspended')
+);
+
+// Using filter map
+final staffAlt = await db.listDocuments('users', filters: {
+  'role__in': 'admin,moderator,support',
+});
+```
+</Tab>
+
+<Tab title="Go">
+```go
+// In - match any of the values
+query := cocobase.NewQuery().In("role", "admin", "moderator", "support")
+staff, _ := client.ListDocuments(ctx, "users", query)
+
+// Not in - exclude values
+query = cocobase.NewQuery().NotIn("status", "deleted", "banned", "suspended")
+active, _ := client.ListDocuments(ctx, "users", query)
+```
+</Tab>
+
+<Tab title="Python">
+```python
+# In - match any of the values
+params = {'role_in': 'admin,moderator,support'}
+staff = requests.get(
+    f'{BASE_URL}/collections/users/documents',
+    headers=headers,
+    params=params
+).json()
+
+# Not in - exclude values
+params = {'status_notin': 'deleted,banned,suspended'}
+active = requests.get(
+    f'{BASE_URL}/collections/users/documents',
+    headers=headers,
+    params=params
+).json()
+
+# Array contains (for array fields)
+params = {'followers_array_contains': 'user_123'}
+followers = requests.get(
+    f'{BASE_URL}/collections/users/documents',
+    headers=headers,
+    params=params
+).json()
+```
+</Tab>
+
+<Tab title="HTTP">
+```bash
+# In - match any of the values
+curl "https://api.cocobase.buzz/collections/users/documents?role_in=admin,moderator,support" \
+  -H "X-API-Key: your-api-key"
+
+# Not in - exclude values
+curl "https://api.cocobase.buzz/collections/users/documents?status_notin=deleted,banned,suspended" \
+  -H "X-API-Key: your-api-key"
+
+# Array contains
+curl "https://api.cocobase.buzz/collections/users/documents?followers_array_contains=user_123" \
+  -H "X-API-Key: your-api-key"
+```
+</Tab>
+</Tabs>
+
+---
+
+## Logical Operators
+
+Combine filters with AND and OR logic for complex queries.
+
+### OR Queries
+
+<Tabs>
+<Tab title="JavaScript">
+```javascript
+// Simple OR - match any condition
+const users = await db.listDocuments('users', {
+  filters: {
+    '[or]role': 'admin',
+    '[or]isPremium': true
+  }
+});
+
+// Multi-field search
+const searchResults = await db.listDocuments('users', {
+  filters: {
+    'name__or__email_contains': 'john'
+  }
+});
+```
+</Tab>
+
+<Tab title="Dart">
+```dart
+// Simple OR conditions
+final users = await db.listDocuments('users',
+  queryBuilder: QueryBuilder()
+    .or()
+      .where('role', 'admin')
+      .where('isPremium', true)
+    .done()
+);
+
+// Multi-field search
+final searchResults = await db.listDocuments('users',
+  queryBuilder: QueryBuilder()
+    .searchInFields(['name', 'email', 'username'], 'john')
+);
+```
+</Tab>
+
+<Tab title="Go">
+```go
+// Simple OR conditions
+query := cocobase.NewQuery().
+    Or().
+        Where("role", "admin").
+        Where("isPremium", true).
+    Done()
+users, _ := client.ListDocuments(ctx, "users", query)
+
+// Multi-field search
+query = cocobase.NewQuery().Search("john", "name", "email", "username")
+searchResults, _ := client.ListDocuments(ctx, "users", query)
+```
+</Tab>
+
+<Tab title="Python">
+```python
+# Simple OR - match any condition
+params = {
+    '[or]role': 'admin',
+    '[or]isPremium': 'true'
+}
+users = requests.get(
+    f'{BASE_URL}/collections/users/documents',
+    headers=headers,
+    params=params
+).json()
+
+# Multi-field search
+params = {'name__or__email_contains': 'john'}
+search_results = requests.get(
+    f'{BASE_URL}/collections/users/documents',
+    headers=headers,
+    params=params
+).json()
+```
+</Tab>
+
+<Tab title="HTTP">
+```bash
+# Simple OR - match any condition
+curl "https://api.cocobase.buzz/collections/users/documents?[or]role=admin&[or]isPremium=true" \
+  -H "X-API-Key: your-api-key"
+
+# Multi-field search
+curl "https://api.cocobase.buzz/collections/users/documents?name__or__email_contains=john" \
+  -H "X-API-Key: your-api-key"
+```
+</Tab>
+</Tabs>
+
+### Complex Queries (AND + OR)
+
+<Tabs>
+<Tab title="JavaScript">
+```javascript
+// Active users who are (admin OR moderator)
+const users = await db.listDocuments('users', {
+  filters: {
+    status: 'active',
+    '[or]role': 'admin',
+    '[or]role': 'moderator'
+  }
+});
+
+// Advanced: (Premium OR Verified) AND Active
+const eligibleUsers = await db.listDocuments('users', {
+  filters: {
+    status: 'active',
+    '[or:tier]isPremium': true,
+    '[or:tier]isVerified': true
+  }
+});
+```
+</Tab>
+
+<Tab title="Dart">
+```dart
+// Active users who are (admin OR moderator)
+final users = await db.listDocuments('users',
+  queryBuilder: QueryBuilder()
+    .where('status', 'active')
+    .or()
+      .where('role', 'admin')
+      .where('role', 'moderator')
+    .done()
+);
+
+// Named OR groups
+final eligibleUsers = await db.listDocuments('users',
+  queryBuilder: QueryBuilder()
+    .where('status', 'active')
+    .orGroup('tier')
+      .where('isPremium', true)
+      .where('isVerified', true)
+    .done()
+);
+```
+</Tab>
+
+<Tab title="Go">
+```go
+// Active users who are (admin OR moderator)
+query := cocobase.NewQuery().
+    Where("status", "active").
+    Or().
+        Where("role", "admin").
+        Where("role", "moderator").
+    Done()
+users, _ := client.ListDocuments(ctx, "users", query)
+
+// Named OR groups
+query = cocobase.NewQuery().
+    Where("status", "active").
+    OrGroup("tier").
+        Where("isPremium", true).
+        Where("isVerified", true).
+    Done()
+eligibleUsers, _ := client.ListDocuments(ctx, "users", query)
+```
+</Tab>
+
+<Tab title="Python">
+```python
+# Active users who are (admin OR moderator)
+params = {
+    'status': 'active',
+    '[or]role': 'admin',
+    '[or]role': 'moderator'
+}
+users = requests.get(
+    f'{BASE_URL}/collections/users/documents',
+    headers=headers,
+    params=params
+).json()
+
+# Named OR groups
+params = {
+    'status': 'active',
+    '[or:tier]isPremium': 'true',
+    '[or:tier]isVerified': 'true'
+}
+eligible_users = requests.get(
+    f'{BASE_URL}/collections/users/documents',
+    headers=headers,
+    params=params
+).json()
+```
+</Tab>
+
+<Tab title="HTTP">
+```bash
+# Active users who are (admin OR moderator)
+curl "https://api.cocobase.buzz/collections/users/documents?status=active&[or]role=admin&[or]role=moderator" \
+  -H "X-API-Key: your-api-key"
+
+# Named OR groups
+curl "https://api.cocobase.buzz/collections/users/documents?status=active&[or:tier]isPremium=true&[or:tier]isVerified=true" \
+  -H "X-API-Key: your-api-key"
+```
+</Tab>
+</Tabs>
+
+---
+
+## Sorting
+
+Order results by any field in ascending or descending order.
+
+<Tabs>
+<Tab title="JavaScript">
+```javascript
+// Sort ascending
+const byName = await db.listDocuments('users', {
+  orderBy: 'name',
+  order: 'asc'
+});
+
+// Sort descending
+const newest = await db.listDocuments('users', {
+  orderBy: 'created_at',
+  order: 'desc'
+});
+
+// Multiple sorts
+const sorted = await db.listDocuments('users', {
+  orderBy: 'role,name',
+  order: 'asc'
+});
+```
+</Tab>
+
+<Tab title="Dart">
+```dart
+// Sort ascending
+final byName = await db.listDocuments('users',
+  queryBuilder: QueryBuilder().orderByAsc('name')
+);
+
+// Sort descending
+final newest = await db.listDocuments('users',
+  queryBuilder: QueryBuilder().orderByDesc('created_at')
+);
+
+// Helper methods
+final recent = await db.listDocuments('users',
+  queryBuilder: QueryBuilder().recent()  // Shortcut for orderByDesc('created_at')
+);
+
+final oldest = await db.listDocuments('users',
+  queryBuilder: QueryBuilder().oldest()  // Shortcut for orderByAsc('created_at')
+);
+```
+</Tab>
+
+<Tab title="Go">
+```go
+// Sort ascending
+query := cocobase.NewQuery().OrderByAsc("name")
+byName, _ := client.ListDocuments(ctx, "users", query)
+
+// Sort descending
+query = cocobase.NewQuery().OrderByDesc("created_at")
+newest, _ := client.ListDocuments(ctx, "users", query)
+
+// Helper methods
+query = cocobase.NewQuery().Recent()  // Shortcut for newest first
+recent, _ := client.ListDocuments(ctx, "users", query)
+
+query = cocobase.NewQuery().Oldest()  // Shortcut for oldest first
+oldest, _ := client.ListDocuments(ctx, "users", query)
+```
+</Tab>
+
+<Tab title="Python">
+```python
+# Sort ascending
+params = {'orderBy': 'name', 'order': 'asc'}
+by_name = requests.get(
+    f'{BASE_URL}/collections/users/documents',
+    headers=headers,
+    params=params
+).json()
+
+# Sort descending
+params = {'orderBy': 'created_at', 'order': 'desc'}
+newest = requests.get(
+    f'{BASE_URL}/collections/users/documents',
+    headers=headers,
+    params=params
+).json()
+```
+</Tab>
+
+<Tab title="HTTP">
+```bash
+# Sort ascending
+curl "https://api.cocobase.buzz/collections/users/documents?orderBy=name&order=asc" \
+  -H "X-API-Key: your-api-key"
+
+# Sort descending
+curl "https://api.cocobase.buzz/collections/users/documents?orderBy=created_at&order=desc" \
+  -H "X-API-Key: your-api-key"
+```
+</Tab>
+</Tabs>
+
+---
+
+## Pagination
+
+Efficiently handle large datasets with limit and offset.
+
+<Tabs>
+<Tab title="JavaScript">
+```javascript
+// Get first page (10 items)
+const page1 = await db.listDocuments('users', {
+  limit: 10,
+  offset: 0
+});
+
+// Get next page
+const page2 = await db.listDocuments('users', {
+  limit: 10,
+  offset: 10
+});
+
+// Helper function
+async function getPage(pageNumber, pageSize = 10) {
+  return db.listDocuments('users', {
+    limit: pageSize,
+    offset: (pageNumber - 1) * pageSize
+  });
+}
+
+const page3 = await getPage(3);
+```
+</Tab>
+
+<Tab title="Dart">
+```dart
+// Get first page (10 items)
+final page1 = await db.listDocuments('users',
+  queryBuilder: QueryBuilder().limit(10).offset(0)
+);
+
+// Get next page
+final page2 = await db.listDocuments('users',
+  queryBuilder: QueryBuilder().limit(10).offset(10)
+);
+
+// Using skip and take aliases
+final page3 = await db.listDocuments('users',
+  queryBuilder: QueryBuilder().take(10).skip(20)
+);
+
+// Page helper
+final page4 = await db.listDocuments('users',
+  queryBuilder: QueryBuilder().page(4, 10)
+);
+```
+</Tab>
+
+<Tab title="Go">
+```go
+// Get first page (10 items)
+query := cocobase.NewQuery().Limit(10).Offset(0)
+page1, _ := client.ListDocuments(ctx, "users", query)
+
+// Get next page
+query = cocobase.NewQuery().Limit(10).Offset(10)
+page2, _ := client.ListDocuments(ctx, "users", query)
+
+// Page helper
+query = cocobase.NewQuery().Page(3, 10)
+page3, _ := client.ListDocuments(ctx, "users", query)
+```
+</Tab>
+
+<Tab title="Python">
+```python
+# Get first page (10 items)
+params = {'limit': 10, 'offset': 0}
+page1 = requests.get(
+    f'{BASE_URL}/collections/users/documents',
+    headers=headers,
+    params=params
+).json()
+
+# Get next page
+params = {'limit': 10, 'offset': 10}
+page2 = requests.get(
+    f'{BASE_URL}/collections/users/documents',
+    headers=headers,
+    params=params
+).json()
+
+# Helper function
+def get_page(page_number, page_size=10):
+    params = {
+        'limit': page_size,
+        'offset': (page_number - 1) * page_size
+    }
+    return requests.get(
+        f'{BASE_URL}/collections/users/documents',
+        headers=headers,
+        params=params
+    ).json()
+
+page3 = get_page(3)
+```
+</Tab>
+
+<Tab title="HTTP">
+```bash
+# Get first page (10 items)
+curl "https://api.cocobase.buzz/collections/users/documents?limit=10&offset=0" \
+  -H "X-API-Key: your-api-key"
+
+# Get next page
+curl "https://api.cocobase.buzz/collections/users/documents?limit=10&offset=10" \
+  -H "X-API-Key: your-api-key"
+
+# Page 3
+curl "https://api.cocobase.buzz/collections/users/documents?limit=10&offset=20" \
+  -H "X-API-Key: your-api-key"
+```
+</Tab>
+</Tabs>
+
+---
+
+## Query Builder Pattern
+
+Use fluent, chainable APIs for complex queries.
+
+<Tabs>
+<Tab title="JavaScript">
+```javascript
+// Not directly supported in JS SDK - use filters object
+const users = await db.listDocuments('users', {
+  filters: {
+    status: 'active',
+    age_gte: 18,
+    role_in: 'admin,moderator'
+  },
+  orderBy: 'created_at',
+  order: 'desc',
+  limit: 20
+});
+```
+</Tab>
+
+<Tab title="Dart">
+```dart
+// Fluent query builder
+final users = await db.listDocuments('users',
+  queryBuilder: QueryBuilder()
+    .where('status', 'active')
+    .whereGreaterThanOrEqual('age', 18)
+    .whereIn('role', 'admin,moderator')
+    .orderByDesc('created_at')
+    .limit(20)
+);
+
+// Complex query with OR
+final results = await db.listDocuments('users',
+  queryBuilder: QueryBuilder()
+    .where('status', 'active')
+    .or()
+      .whereGreaterThan('score', 100)
+      .where('isPremium', true)
+    .done()
+    .recent()
+    .limit(50)
+);
+```
+</Tab>
+
+<Tab title="Go">
+```go
+// Fluent query builder
+query := cocobase.NewQuery().
+    Where("status", "active").
+    GreaterThanOrEqual("age", 18).
+    In("role", "admin", "moderator").
+    OrderByDesc("created_at").
+    Limit(20)
+
+users, _ := client.ListDocuments(ctx, "users", query)
+
+// Complex query with OR
+query = cocobase.NewQuery().
+    Where("status", "active").
+    Or().
+        GreaterThan("score", 100).
+        Where("isPremium", true).
+    Done().
+    Recent().
+    Limit(50)
+
+results, _ := client.ListDocuments(ctx, "users", query)
+```
+</Tab>
+
+<Tab title="Python">
+```python
+# Build query params programmatically
+def build_query(**kwargs):
+    params = {}
+    if 'status' in kwargs:
+        params['status'] = kwargs['status']
+    if 'min_age' in kwargs:
+        params['age_gte'] = kwargs['min_age']
+    if 'roles' in kwargs:
+        params['role_in'] = ','.join(kwargs['roles'])
+    if 'order_by' in kwargs:
+        params['orderBy'] = kwargs['order_by']
+        params['order'] = kwargs.get('order', 'asc')
+    if 'limit' in kwargs:
+        params['limit'] = kwargs['limit']
+    return params
+
+# Usage
+params = build_query(
+    status='active',
+    min_age=18,
+    roles=['admin', 'moderator'],
+    order_by='created_at',
+    order='desc',
+    limit=20
+)
+
+users = requests.get(
+    f'{BASE_URL}/collections/users/documents',
+    headers=headers,
+    params=params
+).json()
+```
+</Tab>
+
+<Tab title="HTTP">
+```bash
+# All parameters in URL
+curl "https://api.cocobase.buzz/collections/users/documents?status=active&age_gte=18&role_in=admin,moderator&orderBy=created_at&order=desc&limit=20" \
+  -H "X-API-Key: your-api-key"
+```
+</Tab>
+</Tabs>
+
+---
+
+## Real-World Examples
+
+### E-commerce Product Search
+
+<Tabs>
+<Tab title="JavaScript">
+```javascript
+async function searchProducts(searchTerm, minPrice, maxPrice, category) {
+  return await db.listDocuments('products', {
+    filters: {
+      name_contains: searchTerm,
+      price_gte: minPrice,
+      price_lte: maxPrice,
+      category: category,
+      inStock: true
+    },
+    orderBy: 'popularity',
+    order: 'desc',
+    limit: 24
+  });
+}
+
+const laptops = await searchProducts('laptop', 500, 2000, 'electronics');
+```
+</Tab>
+
+<Tab title="Dart">
+```dart
+Future<List<Document>> searchProducts({
+  required String searchTerm,
+  required double minPrice,
+  required double maxPrice,
+  required String category,
+}) async {
+  return await db.listDocuments('products',
+    queryBuilder: QueryBuilder()
+      .whereContains('name', searchTerm)
+      .whereGreaterThanOrEqual('price', minPrice)
+      .whereLessThanOrEqual('price', maxPrice)
+      .where('category', category)
+      .where('inStock', true)
+      .orderByDesc('popularity')
+      .limit(24)
+  );
+}
+
+final laptops = await searchProducts(
+  searchTerm: 'laptop',
+  minPrice: 500,
+  maxPrice: 2000,
+  category: 'electronics',
+);
+```
+</Tab>
+
+<Tab title="Go">
+```go
+func searchProducts(client *cocobase.Client, searchTerm string, minPrice, maxPrice float64, category string) ([]cocobase.Document, error) {
+    query := cocobase.NewQuery().
+        Contains("name", searchTerm).
+        Between("price", minPrice, maxPrice).
+        Where("category", category).
+        Where("inStock", true).
+        OrderByDesc("popularity").
+        Limit(24)
+
+    return client.ListDocuments(ctx, "products", query)
+}
+
+laptops, _ := searchProducts(client, "laptop", 500, 2000, "electronics")
+```
+</Tab>
+
+<Tab title="Python">
+```python
+def search_products(search_term, min_price, max_price, category):
+    params = {
+        'name_contains': search_term,
+        'price_gte': min_price,
+        'price_lte': max_price,
+        'category': category,
+        'inStock': 'true',
+        'orderBy': 'popularity',
+        'order': 'desc',
+        'limit': 24
+    }
+
+    response = requests.get(
+        f'{BASE_URL}/collections/products/documents',
+        headers=headers,
+        params=params
+    )
+    return response.json()
+
+laptops = search_products('laptop', 500, 2000, 'electronics')
+```
+</Tab>
+
+<Tab title="HTTP">
+```bash
+curl "https://api.cocobase.buzz/collections/products/documents?name_contains=laptop&price_gte=500&price_lte=2000&category=electronics&inStock=true&orderBy=popularity&order=desc&limit=24" \
+  -H "X-API-Key: your-api-key"
+```
+</Tab>
+</Tabs>
+
+### Social Feed with Filters
+
+<Tabs>
+<Tab title="JavaScript">
+```javascript
+async function getUserFeed(userId, page = 1) {
+  return await db.listDocuments('posts', {
+    filters: {
+      '[or]author_id': userId,
+      '[or]followers_array_contains': userId,
+      status: 'published'
+    },
+    orderBy: 'created_at',
+    order: 'desc',
+    limit: 20,
+    offset: (page - 1) * 20
+  });
+}
+
+const myFeed = await getUserFeed('user-123');
+```
+</Tab>
+
+<Tab title="Dart">
+```dart
+Future<List<Document>> getUserFeed(String userId, {int page = 1}) async {
+  return await db.listDocuments('posts',
+    queryBuilder: QueryBuilder()
+      .or()
+        .where('author_id', userId)
+        .where('followers_array_contains', userId)
+      .done()
+      .where('status', 'published')
+      .orderByDesc('created_at')
+      .limit(20)
+      .offset((page - 1) * 20)
+  );
+}
+
+final myFeed = await getUserFeed('user-123');
+```
+</Tab>
+
+<Tab title="Go">
+```go
+func getUserFeed(client *cocobase.Client, userID string, page int) ([]cocobase.Document, error) {
+    query := cocobase.NewQuery().
+        Or().
+            Where("author_id", userID).
+            Where("followers_array_contains", userID).
+        Done().
+        Where("status", "published").
+        Recent().
+        Page(page, 20)
+
+    return client.ListDocuments(ctx, "posts", query)
+}
+
+myFeed, _ := getUserFeed(client, "user-123", 1)
+```
+</Tab>
+
+<Tab title="Python">
+```python
+def get_user_feed(user_id, page=1):
+    params = {
+        '[or]author_id': user_id,
+        '[or]followers_array_contains': user_id,
+        'status': 'published',
+        'orderBy': 'created_at',
+        'order': 'desc',
+        'limit': 20,
+        'offset': (page - 1) * 20
+    }
+
+    response = requests.get(
+        f'{BASE_URL}/collections/posts/documents',
+        headers=headers,
+        params=params
+    )
+    return response.json()
+
+my_feed = get_user_feed('user-123')
+```
+</Tab>
+
+<Tab title="HTTP">
+```bash
+curl "https://api.cocobase.buzz/collections/posts/documents?[or]author_id=user-123&[or]followers_array_contains=user-123&status=published&orderBy=created_at&order=desc&limit=20&offset=0" \
+  -H "X-API-Key: your-api-key"
+```
+</Tab>
+</Tabs>
+
+---
+
+## Best Practices
+
+<AccordionGroup>
+<Accordion title="1. Use Specific Filters">
+Filter on the server, not the client. This reduces bandwidth and improves performance.
+
+```javascript
+// ✓ Good: Filter on server
+const users = await db.listDocuments('users', {
+  filters: { status: 'active', age_gte: 18 }
+});
+
+// ✗ Bad: Fetch all, filter client-side
+const allUsers = await db.listDocuments('users');
+const filtered = allUsers.filter(u => u.status === 'active' && u.age >= 18);
+```
+</Accordion>
+
+<Accordion title="2. Always Use Pagination">
+Never fetch all documents at once. Use limit and offset for better performance.
+
+```javascript
+// ✓ Good: Paginated
+const users = await db.listDocuments('users', {
+  limit: 50,
+  offset: 0
+});
+
+// ✗ Bad: No limit
+const allUsers = await db.listDocuments('users');
+```
+</Accordion>
+
+<Accordion title="3. Index Frequently Queried Fields">
+Contact support to add indexes for fields you query often for better performance.
+</Accordion>
+
+<Accordion title="4. Combine Filters Efficiently">
+Order filters from most to least selective for optimal query planning.
+
+```javascript
+// ✓ Good: Most selective first
+filters: {
+  id: 'specific-id',        // Very selective
+  email: 'user@example.com', // Selective
+  status: 'active'          // Less selective
+}
+```
+</Accordion>
+
+<Accordion title="5. Use Query Builder for Complex Queries">
+For complex queries with OR logic, use the query builder pattern.
+
+```dart
+// ✓ Good: Clear structure
+final users = await db.listDocuments('users',
+  queryBuilder: QueryBuilder()
+    .where('status', 'active')
+    .or()
+      .where('isPremium', true)
+      .where('isVerified', true)
+    .done()
+    .recent()
+);
+```
+</Accordion>
+</AccordionGroup>
+
+---
+
+## Operator Reference
+
+### Comparison Operators
+
+| Operator | Suffix    | Description              | Example           |
+| -------- | --------- | ------------------------ | ----------------- |
+| Equal    | (none)    | Exact match              | `status=active`   |
+| Not Equal| `_ne`     | Not equal to             | `role_ne=admin`   |
+| Greater  | `_gt`     | Greater than             | `age_gt=18`       |
+| Gte      | `_gte`    | Greater than or equal    | `age_gte=18`      |
+| Less     | `_lt`     | Less than                | `age_lt=65`       |
+| Lte      | `_lte`    | Less than or equal       | `age_lte=65`      |
+
+### String Operators
+
+| Operator | Suffix        | Description   | Example                    |
+| -------- | ------------- | ------------- | -------------------------- |
+| Contains | `_contains`   | Substring     | `name_contains=john`       |
+| Starts   | `_startswith` | Starts with   | `email_startswith=admin`   |
+| Ends     | `_endswith`   | Ends with     | `email_endswith=@gmail.com`|
+
+### List Operators
+
+| Operator  | Suffix    | Description      | Example                        |
+| --------- | --------- | ---------------- | ------------------------------ |
+| In        | `_in`     | Match any        | `role_in=admin,moderator`      |
+| Not In    | `_notin`  | Exclude values   | `status_notin=deleted,banned`  |
+| Contains  | `_array_contains` | Array contains | `tags_array_contains=featured` |
+
+---
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="CRUD Operations" icon="database" href="/features/crud-operations">
+    Learn the basics of creating, reading, updating, deleting
+  </Card>
+  <Card title="Real-time Updates" icon="bolt" href="/features/realtime">
+    Subscribe to live filtered query results
+  </Card>
+  <Card title="Relationships" icon="link" href="/features/relationships">
+    Populate related documents in queries
+  </Card>
+  <Card title="Authentication" icon="shield" href="/features/authentication">
+    Query authenticated user collections
+  </Card>
+</CardGroup>

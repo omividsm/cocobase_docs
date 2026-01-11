@@ -1,0 +1,1411 @@
+---
+title: Authentication
+description: Complete guide to user authentication and management with Cocobase
+icon: lock
+---
+
+# Authentication
+
+Cocobase provides a complete authentication system with user registration, login, session management, and profile handling. No complex setup required - just use the built-in auth methods.
+
+## Quick Start
+
+<Tabs>
+  <Tab title="JavaScript">
+    ```typescript
+    import { Cocobase } from "cocobase";
+
+    const db = new Cocobase({ apiKey: "YOUR_API_KEY" });
+
+    // Register a new user
+    const user = await db.auth.register(
+      "user@example.com",
+      "securePassword123",
+      {
+        full_name: "Alice Johnson",
+        role: "developer"
+      }
+    );
+
+    // Login
+    const session = await db.auth.login("user@example.com", "securePassword123");
+    ```
+  </Tab>
+
+  <Tab title="Dart">
+    ```dart
+    final db = Cocobase(CocobaseConfig(apiKey: "YOUR_API_KEY"));
+
+    // Register a new user
+    final user = await db.register(
+      email: 'user@example.com',
+      password: 'securePassword123',
+      data: {
+        'full_name': 'Alice Johnson',
+        'role': 'developer',
+      },
+    );
+
+    // Login
+    final session = await db.login(
+      email: 'user@example.com',
+      password: 'securePassword123',
+    );
+    ```
+  </Tab>
+
+  <Tab title="Go">
+    ```go
+    client := cocobase.NewClient(cocobase.Config{
+        APIKey: "YOUR_API_KEY",
+    })
+
+    // Register a new user
+    user, err := client.Register(ctx, "user@example.com", "securePassword123", map[string]any{
+        "full_name": "Alice Johnson",
+        "role":      "developer",
+    })
+
+    // Login
+    session, err := client.Login(ctx, "user@example.com", "securePassword123")
+    ```
+  </Tab>
+
+  <Tab title="Python">
+    ```python
+    db = Cocobase(api_key="YOUR_API_KEY")
+
+    # Register a new user
+    user = db.auth.register(
+        "user@example.com",
+        "securePassword123",
+        {
+            "full_name": "Alice Johnson",
+            "role": "developer"
+        }
+    )
+
+    # Login
+    session = db.auth.login("user@example.com", "securePassword123")
+    ```
+  </Tab>
+
+  <Tab title="HTTP">
+    ```bash
+    # Register
+    curl -X POST https://api.cocobase.buzz/auth/register \
+      -H "Authorization: Bearer YOUR_API_KEY" \
+      -H "Content-Type: application/json" \
+      -d '{
+        "email": "user@example.com",
+        "password": "securePassword123",
+        "data": {
+          "full_name": "Alice Johnson",
+          "role": "developer"
+        }
+      }'
+
+    # Login
+    curl -X POST https://api.cocobase.buzz/auth/login \
+      -H "Authorization: Bearer YOUR_API_KEY" \
+      -H "Content-Type: application/json" \
+      -d '{
+        "email": "user@example.com",
+        "password": "securePassword123"
+      }'
+    ```
+  </Tab>
+</Tabs>
+
+## User Registration
+
+Create new user accounts with email and password:
+
+<Tabs>
+  <Tab title="JavaScript">
+    ```typescript
+    // Basic registration
+    const user = await db.auth.register(
+      "alice@example.com",
+      "SecurePass123!"
+    );
+
+    // With additional user data
+    const userWithData = await db.auth.register(
+      "bob@example.com",
+      "SecurePass123!",
+      {
+        full_name: "Bob Smith",
+        age: 25,
+        role: "admin",
+        preferences: {
+          theme: "dark",
+          notifications: true
+        }
+      }
+    );
+    ```
+
+    **Response:**
+    ```json
+    {
+      "_id": "user_123abc",
+      "email": "alice@example.com",
+      "data": {
+        "full_name": "Bob Smith",
+        "age": 25,
+        "role": "admin",
+        "preferences": {
+          "theme": "dark",
+          "notifications": true
+        }
+      },
+      "createdAt": "2024-01-15T10:30:00Z",
+      "token": "eyJhbGc..."
+    }
+    ```
+  </Tab>
+
+  <Tab title="Dart">
+    ```dart
+    // Basic registration
+    final user = await db.register(
+      email: 'alice@example.com',
+      password: 'SecurePass123!',
+    );
+
+    // With additional user data
+    final userWithData = await db.register(
+      email: 'bob@example.com',
+      password: 'SecurePass123!',
+      data: {
+        'full_name': 'Bob Smith',
+        'age': 25,
+        'role': 'admin',
+        'preferences': {
+          'theme': 'dark',
+          'notifications': true,
+        },
+      },
+    );
+    ```
+  </Tab>
+
+  <Tab title="Go">
+    ```go
+    // Basic registration
+    user, err := client.Register(ctx, "alice@example.com", "SecurePass123!", nil)
+    if err != nil {
+        log.Fatal(err)
+    }
+
+    // With additional user data
+    userWithData, err := client.Register(ctx, "bob@example.com", "SecurePass123!", map[string]any{
+        "full_name": "Bob Smith",
+        "age":       25,
+        "role":      "admin",
+        "preferences": map[string]any{
+            "theme":         "dark",
+            "notifications": true,
+        },
+    })
+    ```
+  </Tab>
+
+  <Tab title="Python">
+    ```python
+    # Basic registration
+    user = db.auth.register("alice@example.com", "SecurePass123!")
+
+    # With additional user data
+    user_with_data = db.auth.register(
+        "bob@example.com",
+        "SecurePass123!",
+        {
+            "full_name": "Bob Smith",
+            "age": 25,
+            "role": "admin",
+            "preferences": {
+                "theme": "dark",
+                "notifications": True
+            }
+        }
+    )
+    ```
+  </Tab>
+
+  <Tab title="HTTP">
+    ```bash
+    curl -X POST https://api.cocobase.buzz/auth/register \
+      -H "Authorization: Bearer YOUR_API_KEY" \
+      -H "Content-Type: application/json" \
+      -d '{
+        "email": "bob@example.com",
+        "password": "SecurePass123!",
+        "data": {
+          "full_name": "Bob Smith",
+          "age": 25,
+          "role": "admin",
+          "preferences": {
+            "theme": "dark",
+            "notifications": true
+          }
+        }
+      }'
+    ```
+  </Tab>
+</Tabs>
+
+<Note>
+  Password requirements:
+  - Minimum 8 characters
+  - At least one uppercase letter
+  - At least one lowercase letter
+  - At least one number
+</Note>
+
+## User Login
+
+Authenticate users and get access tokens:
+
+<Tabs>
+  <Tab title="JavaScript">
+    ```typescript
+    // Login
+    const session = await db.auth.login(
+      "alice@example.com",
+      "SecurePass123!"
+    );
+
+    console.log("Token:", session.token);
+    console.log("User:", session.user);
+
+    // The token is automatically stored and used for future requests
+    ```
+
+    **With automatic token persistence:**
+    ```typescript
+    // Token is automatically saved to localStorage
+    await db.auth.login("alice@example.com", "SecurePass123!");
+
+    // On page reload, check if user is still logged in
+    const currentUser = db.auth.getCurrentUser();
+    if (currentUser) {
+      console.log("User is logged in:", currentUser);
+    }
+    ```
+  </Tab>
+
+  <Tab title="Dart">
+    ```dart
+    // Login
+    final session = await db.login(
+      email: 'alice@example.com',
+      password: 'SecurePass123!',
+    );
+
+    print('Token: ${session.token}');
+    print('User: ${session.user}');
+
+    // Check current user
+    final currentUser = await db.getCurrentUser();
+    if (currentUser != null) {
+      print('User is logged in: $currentUser');
+    }
+    ```
+  </Tab>
+
+  <Tab title="Go">
+    ```go
+    // Login
+    session, err := client.Login(ctx, "alice@example.com", "SecurePass123!")
+    if err != nil {
+        log.Fatal(err)
+    }
+
+    fmt.Printf("Token: %s\n", session.Token)
+    fmt.Printf("User: %+v\n", session.User)
+
+    // Token is automatically stored and used for future requests
+    ```
+  </Tab>
+
+  <Tab title="Python">
+    ```python
+    # Login
+    session = db.auth.login("alice@example.com", "SecurePass123!")
+
+    print(f"Token: {session['token']}")
+    print(f"User: {session['user']}")
+
+    # Check current user
+    current_user = db.auth.get_current_user()
+    if current_user:
+        print(f"User is logged in: {current_user}")
+    ```
+  </Tab>
+
+  <Tab title="HTTP">
+    ```bash
+    curl -X POST https://api.cocobase.buzz/auth/login \
+      -H "Authorization: Bearer YOUR_API_KEY" \
+      -H "Content-Type: application/json" \
+      -d '{
+        "email": "alice@example.com",
+        "password": "SecurePass123!"
+      }'
+    ```
+
+    **Response:**
+    ```json
+    {
+      "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
+      "user": {
+        "_id": "user_123abc",
+        "email": "alice@example.com",
+        "data": { ... }
+      }
+    }
+    ```
+
+    **Use the token in subsequent requests:**
+    ```bash
+    curl -X GET https://api.cocobase.buzz/collections/posts \
+      -H "Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+    ```
+  </Tab>
+</Tabs>
+
+## Get Current User
+
+Retrieve the currently authenticated user:
+
+<Tabs>
+  <Tab title="JavaScript">
+    ```typescript
+    // Get current user (from stored token)
+    const user = db.auth.getCurrentUser();
+
+    if (user) {
+      console.log("Logged in as:", user.email);
+      console.log("User data:", user.data);
+    } else {
+      console.log("No user logged in");
+    }
+
+    // Fetch fresh user data from server
+    const freshUser = await db.auth.fetchCurrentUser();
+    ```
+  </Tab>
+
+  <Tab title="Dart">
+    ```dart
+    // Get current user
+    final user = await db.getCurrentUser();
+
+    if (user != null) {
+      print('Logged in as: ${user.email}');
+      print('User data: ${user.data}');
+    } else {
+      print('No user logged in');
+    }
+    ```
+  </Tab>
+
+  <Tab title="Go">
+    ```go
+    // Get current user
+    user, err := client.GetCurrentUser(ctx)
+    if err != nil {
+        log.Printf("No user logged in: %v", err)
+        return
+    }
+
+    fmt.Printf("Logged in as: %s\n", user.Email)
+    fmt.Printf("User data: %+v\n", user.Data)
+    ```
+  </Tab>
+
+  <Tab title="Python">
+    ```python
+    # Get current user
+    user = db.auth.get_current_user()
+
+    if user:
+        print(f"Logged in as: {user['email']}")
+        print(f"User data: {user['data']}")
+    else:
+        print("No user logged in")
+    ```
+  </Tab>
+
+  <Tab title="HTTP">
+    ```bash
+    curl -X GET https://api.cocobase.buzz/auth/me \
+      -H "Authorization: Bearer YOUR_USER_TOKEN"
+    ```
+  </Tab>
+</Tabs>
+
+## Update User Profile
+
+Update user data after authentication:
+
+<Tabs>
+  <Tab title="JavaScript">
+    ```typescript
+    // Update user profile
+    const updatedUser = await db.auth.updateProfile({
+      full_name: "Alice Johnson Smith",
+      bio: "Full-stack developer",
+      avatar: "https://example.com/avatar.jpg",
+      preferences: {
+        theme: "dark",
+        language: "en"
+      }
+    });
+
+    console.log("Updated user:", updatedUser);
+    ```
+  </Tab>
+
+  <Tab title="Dart">
+    ```dart
+    // Update user profile
+    final updatedUser = await db.updateProfile({
+      'full_name': 'Alice Johnson Smith',
+      'bio': 'Full-stack developer',
+      'avatar': 'https://example.com/avatar.jpg',
+      'preferences': {
+        'theme': 'dark',
+        'language': 'en',
+      },
+    });
+
+    print('Updated user: $updatedUser');
+    ```
+  </Tab>
+
+  <Tab title="Go">
+    ```go
+    // Update user profile
+    updatedUser, err := client.UpdateProfile(ctx, map[string]any{
+        "full_name": "Alice Johnson Smith",
+        "bio":       "Full-stack developer",
+        "avatar":    "https://example.com/avatar.jpg",
+        "preferences": map[string]any{
+            "theme":    "dark",
+            "language": "en",
+        },
+    })
+    ```
+  </Tab>
+
+  <Tab title="Python">
+    ```python
+    # Update user profile
+    updated_user = db.auth.update_profile({
+        "full_name": "Alice Johnson Smith",
+        "bio": "Full-stack developer",
+        "avatar": "https://example.com/avatar.jpg",
+        "preferences": {
+            "theme": "dark",
+            "language": "en"
+        }
+    })
+    ```
+  </Tab>
+
+  <Tab title="HTTP">
+    ```bash
+    curl -X PATCH https://api.cocobase.buzz/auth/me \
+      -H "Authorization: Bearer YOUR_USER_TOKEN" \
+      -H "Content-Type: application/json" \
+      -d '{
+        "data": {
+          "full_name": "Alice Johnson Smith",
+          "bio": "Full-stack developer",
+          "avatar": "https://example.com/avatar.jpg"
+        }
+      }'
+    ```
+  </Tab>
+</Tabs>
+
+## Logout
+
+End the user session:
+
+<Tabs>
+  <Tab title="JavaScript">
+    ```typescript
+    // Logout current user
+    await db.auth.logout();
+
+    console.log("User logged out");
+
+    // Verify logout
+    const user = db.auth.getCurrentUser(); // Returns null
+    ```
+  </Tab>
+
+  <Tab title="Dart">
+    ```dart
+    // Logout current user
+    await db.logout();
+
+    print('User logged out');
+
+    // Verify logout
+    final user = await db.getCurrentUser(); // Returns null
+    ```
+  </Tab>
+
+  <Tab title="Go">
+    ```go
+    // Logout current user
+    err := client.Logout(ctx)
+    if err != nil {
+        log.Fatal(err)
+    }
+
+    fmt.Println("User logged out")
+    ```
+  </Tab>
+
+  <Tab title="Python">
+    ```python
+    # Logout current user
+    db.auth.logout()
+
+    print("User logged out")
+    ```
+  </Tab>
+
+  <Tab title="HTTP">
+    ```bash
+    curl -X POST https://api.cocobase.buzz/auth/logout \
+      -H "Authorization: Bearer YOUR_USER_TOKEN"
+    ```
+  </Tab>
+</Tabs>
+
+## Password Management
+
+### Change Password
+
+<Tabs>
+  <Tab title="JavaScript">
+    ```typescript
+    // Change password (user must be logged in)
+    await db.auth.changePassword("oldPassword123", "newPassword456");
+    ```
+  </Tab>
+
+  <Tab title="Dart">
+    ```dart
+    await db.changePassword(
+      oldPassword: 'oldPassword123',
+      newPassword: 'newPassword456',
+    );
+    ```
+  </Tab>
+
+  <Tab title="Go">
+    ```go
+    err := client.ChangePassword(ctx, "oldPassword123", "newPassword456")
+    ```
+  </Tab>
+
+  <Tab title="Python">
+    ```python
+    db.auth.change_password("oldPassword123", "newPassword456")
+    ```
+  </Tab>
+
+  <Tab title="HTTP">
+    ```bash
+    curl -X POST https://api.cocobase.buzz/auth/change-password \
+      -H "Authorization: Bearer YOUR_USER_TOKEN" \
+      -H "Content-Type: application/json" \
+      -d '{
+        "oldPassword": "oldPassword123",
+        "newPassword": "newPassword456"
+      }'
+    ```
+  </Tab>
+</Tabs>
+
+### Request Password Reset
+
+<Tabs>
+  <Tab title="JavaScript">
+    ```typescript
+    // Send password reset email
+    await db.auth.requestPasswordReset("user@example.com");
+    ```
+  </Tab>
+
+  <Tab title="Dart">
+    ```dart
+    await db.requestPasswordReset(email: 'user@example.com');
+    ```
+  </Tab>
+
+  <Tab title="Go">
+    ```go
+    err := client.RequestPasswordReset(ctx, "user@example.com")
+    ```
+  </Tab>
+
+  <Tab title="Python">
+    ```python
+    db.auth.request_password_reset("user@example.com")
+    ```
+  </Tab>
+
+  <Tab title="HTTP">
+    ```bash
+    curl -X POST https://api.cocobase.buzz/auth/request-password-reset \
+      -H "Authorization: Bearer YOUR_API_KEY" \
+      -H "Content-Type: application/json" \
+      -d '{
+        "email": "user@example.com"
+      }'
+    ```
+  </Tab>
+</Tabs>
+
+### Reset Password with Token
+
+<Tabs>
+  <Tab title="JavaScript">
+    ```typescript
+    // Reset password using token from email
+    await db.auth.resetPassword("reset_token_from_email", "newPassword123");
+    ```
+  </Tab>
+
+  <Tab title="Dart">
+    ```dart
+    await db.resetPassword(
+      token: 'reset_token_from_email',
+      newPassword: 'newPassword123',
+    );
+    ```
+  </Tab>
+
+  <Tab title="Go">
+    ```go
+    err := client.ResetPassword(ctx, "reset_token_from_email", "newPassword123")
+    ```
+  </Tab>
+
+  <Tab title="Python">
+    ```python
+    db.auth.reset_password("reset_token_from_email", "newPassword123")
+    ```
+  </Tab>
+
+  <Tab title="HTTP">
+    ```bash
+    curl -X POST https://api.cocobase.buzz/auth/reset-password \
+      -H "Content-Type: application/json" \
+      -d '{
+        "token": "reset_token_from_email",
+        "newPassword": "newPassword123"
+      }'
+    ```
+  </Tab>
+</Tabs>
+
+## OAuth Authentication
+
+Authenticate users with Google, GitHub, and other OAuth providers:
+
+<Tabs>
+  <Tab title="JavaScript">
+    ```typescript
+    // Initiate Google OAuth flow
+    const authUrl = await db.auth.getOAuthUrl("google", {
+      redirectUrl: "https://yourapp.com/auth/callback",
+      scopes: ["email", "profile"]
+    });
+
+    // Redirect user to authUrl
+    window.location.href = authUrl;
+
+    // In your callback handler
+    const urlParams = new URLSearchParams(window.location.search);
+    const code = urlParams.get('code');
+
+    // Exchange code for token
+    const session = await db.auth.handleOAuthCallback("google", code);
+    console.log("User logged in:", session.user);
+    ```
+  </Tab>
+
+  <Tab title="Dart">
+    ```dart
+    // Initiate Google OAuth flow
+    final authUrl = await db.getOAuthUrl(
+      provider: 'google',
+      redirectUrl: 'yourapp://auth/callback',
+      scopes: ['email', 'profile'],
+    );
+
+    // Open authUrl in browser/webview
+
+    // Handle callback
+    final session = await db.handleOAuthCallback(
+      provider: 'google',
+      code: authorizationCode,
+    );
+    ```
+  </Tab>
+
+  <Tab title="Go">
+    ```go
+    // Initiate Google OAuth flow
+    authUrl, err := client.GetOAuthURL(ctx, "google", cocobase.OAuthOptions{
+        RedirectURL: "https://yourapp.com/auth/callback",
+        Scopes:      []string{"email", "profile"},
+    })
+
+    // Handle callback
+    session, err := client.HandleOAuthCallback(ctx, "google", authorizationCode)
+    ```
+  </Tab>
+
+  <Tab title="Python">
+    ```python
+    # Initiate Google OAuth flow
+    auth_url = db.auth.get_oauth_url(
+        "google",
+        redirect_url="https://yourapp.com/auth/callback",
+        scopes=["email", "profile"]
+    )
+
+    # Handle callback
+    session = db.auth.handle_oauth_callback("google", authorization_code)
+    ```
+  </Tab>
+
+  <Tab title="HTTP">
+    ```bash
+    # Get OAuth URL
+    curl -X POST https://api.cocobase.buzz/auth/oauth/google/url \
+      -H "Authorization: Bearer YOUR_API_KEY" \
+      -H "Content-Type: application/json" \
+      -d '{
+        "redirectUrl": "https://yourapp.com/auth/callback",
+        "scopes": ["email", "profile"]
+      }'
+
+    # Handle callback
+    curl -X POST https://api.cocobase.buzz/auth/oauth/google/callback \
+      -H "Authorization: Bearer YOUR_API_KEY" \
+      -H "Content-Type: application/json" \
+      -d '{
+        "code": "AUTHORIZATION_CODE_FROM_GOOGLE"
+      }'
+    ```
+  </Tab>
+</Tabs>
+
+**Supported OAuth Providers:**
+- Google
+- GitHub
+- Facebook
+- Twitter
+- Microsoft
+- Apple
+
+## Two-Factor Authentication (2FA)
+
+### Enable 2FA
+
+<Tabs>
+  <Tab title="JavaScript">
+    ```typescript
+    // Enable 2FA for current user
+    const { qrCode, secret } = await db.auth.enable2FA();
+
+    console.log("Scan this QR code:", qrCode);
+    console.log("Or enter this secret manually:", secret);
+
+    // Verify 2FA setup with code from authenticator app
+    await db.auth.verify2FA("123456");
+    ```
+  </Tab>
+
+  <Tab title="Dart">
+    ```dart
+    // Enable 2FA
+    final result = await db.enable2FA();
+
+    print('QR Code: ${result.qrCode}');
+    print('Secret: ${result.secret}');
+
+    // Verify 2FA
+    await db.verify2FA(code: '123456');
+    ```
+  </Tab>
+
+  <Tab title="Go">
+    ```go
+    // Enable 2FA
+    twoFASetup, err := client.Enable2FA(ctx)
+    if err != nil {
+        log.Fatal(err)
+    }
+
+    fmt.Printf("QR Code: %s\n", twoFASetup.QRCode)
+    fmt.Printf("Secret: %s\n", twoFASetup.Secret)
+
+    // Verify 2FA
+    err = client.Verify2FA(ctx, "123456")
+    ```
+  </Tab>
+
+  <Tab title="Python">
+    ```python
+    # Enable 2FA
+    result = db.auth.enable_2fa()
+
+    print(f"QR Code: {result['qr_code']}")
+    print(f"Secret: {result['secret']}")
+
+    # Verify 2FA
+    db.auth.verify_2fa("123456")
+    ```
+  </Tab>
+
+  <Tab title="HTTP">
+    ```bash
+    # Enable 2FA
+    curl -X POST https://api.cocobase.buzz/auth/2fa/enable \
+      -H "Authorization: Bearer YOUR_USER_TOKEN"
+
+    # Verify 2FA
+    curl -X POST https://api.cocobase.buzz/auth/2fa/verify \
+      -H "Authorization: Bearer YOUR_USER_TOKEN" \
+      -H "Content-Type: application/json" \
+      -d '{
+        "code": "123456"
+      }'
+    ```
+  </Tab>
+</Tabs>
+
+### Login with 2FA
+
+<Tabs>
+  <Tab title="JavaScript">
+    ```typescript
+    try {
+      // First attempt login
+      await db.auth.login("user@example.com", "password123");
+    } catch (error) {
+      if (error.code === "2FA_REQUIRED") {
+        // Prompt user for 2FA code
+        const code = prompt("Enter 2FA code:");
+
+        // Complete login with 2FA
+        await db.auth.verify2FALogin(code);
+      }
+    }
+    ```
+  </Tab>
+
+  <Tab title="Dart">
+    ```dart
+    try {
+      await db.login(
+        email: 'user@example.com',
+        password: 'password123',
+      );
+    } catch (e) {
+      if (e.code == '2FA_REQUIRED') {
+        // Prompt user for 2FA code
+        final code = await get2FACodeFromUser();
+
+        // Complete login with 2FA
+        await db.verify2FALogin(code: code);
+      }
+    }
+    ```
+  </Tab>
+
+  <Tab title="Go">
+    ```go
+    _, err := client.Login(ctx, "user@example.com", "password123")
+    if err != nil {
+        if errors.Is(err, cocobase.Err2FARequired) {
+            // Prompt user for 2FA code
+            code := get2FACodeFromUser()
+
+            // Complete login with 2FA
+            err = client.Verify2FALogin(ctx, code)
+        }
+    }
+    ```
+  </Tab>
+
+  <Tab title="Python">
+    ```python
+    try:
+        db.auth.login("user@example.com", "password123")
+    except TwoFactorRequiredError:
+        # Prompt user for 2FA code
+        code = input("Enter 2FA code: ")
+
+        # Complete login with 2FA
+        db.auth.verify_2fa_login(code)
+    ```
+  </Tab>
+
+  <Tab title="HTTP">
+    ```bash
+    # Login returns 2FA_REQUIRED error
+    curl -X POST https://api.cocobase.buzz/auth/login \
+      -H "Authorization: Bearer YOUR_API_KEY" \
+      -H "Content-Type: application/json" \
+      -d '{
+        "email": "user@example.com",
+        "password": "password123"
+      }'
+
+    # Complete login with 2FA
+    curl -X POST https://api.cocobase.buzz/auth/2fa/verify-login \
+      -H "Authorization: Bearer TEMP_TOKEN_FROM_LOGIN" \
+      -H "Content-Type: application/json" \
+      -d '{
+        "code": "123456"
+      }'
+    ```
+  </Tab>
+</Tabs>
+
+## Role-Based Access Control
+
+Manage user roles and permissions:
+
+<Tabs>
+  <Tab title="JavaScript">
+    ```typescript
+    // Register user with role
+    const admin = await db.auth.register(
+      "admin@example.com",
+      "password123",
+      {
+        full_name: "Admin User",
+        role: "admin"
+      }
+    );
+
+    // Check user role
+    const currentUser = db.auth.getCurrentUser();
+    if (currentUser.data.role === "admin") {
+      // Show admin features
+    }
+
+    // Update user role (admin only)
+    await db.auth.updateUserRole("user_id_123", "moderator");
+    ```
+  </Tab>
+
+  <Tab title="Dart">
+    ```dart
+    // Register user with role
+    final admin = await db.register(
+      email: 'admin@example.com',
+      password: 'password123',
+      data: {
+        'full_name': 'Admin User',
+        'role': 'admin',
+      },
+    );
+
+    // Check user role
+    final currentUser = await db.getCurrentUser();
+    if (currentUser?.data['role'] == 'admin') {
+      // Show admin features
+    }
+    ```
+  </Tab>
+
+  <Tab title="Go">
+    ```go
+    // Register user with role
+    admin, err := client.Register(ctx, "admin@example.com", "password123", map[string]any{
+        "full_name": "Admin User",
+        "role":      "admin",
+    })
+
+    // Check user role
+    currentUser, _ := client.GetCurrentUser(ctx)
+    if currentUser.Data["role"] == "admin" {
+        // Show admin features
+    }
+    ```
+  </Tab>
+
+  <Tab title="Python">
+    ```python
+    # Register user with role
+    admin = db.auth.register(
+        "admin@example.com",
+        "password123",
+        {
+            "full_name": "Admin User",
+            "role": "admin"
+        }
+    )
+
+    # Check user role
+    current_user = db.auth.get_current_user()
+    if current_user['data']['role'] == 'admin':
+        # Show admin features
+        pass
+    ```
+  </Tab>
+
+  <Tab title="HTTP">
+    ```bash
+    # Register with role
+    curl -X POST https://api.cocobase.buzz/auth/register \
+      -H "Authorization: Bearer YOUR_API_KEY" \
+      -H "Content-Type: application/json" \
+      -d '{
+        "email": "admin@example.com",
+        "password": "password123",
+        "data": {
+          "role": "admin"
+        }
+      }'
+    ```
+  </Tab>
+</Tabs>
+
+## Authentication with React
+
+Complete example for React applications:
+
+```typescript
+// hooks/useAuth.ts
+import { useState, useEffect } from 'react';
+import { db } from '@/lib/cocobase';
+
+export function useAuth() {
+  const [user, setUser] = useState(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const currentUser = db.auth.getCurrentUser();
+    setUser(currentUser);
+    setLoading(false);
+  }, []);
+
+  const login = async (email: string, password: string) => {
+    const session = await db.auth.login(email, password);
+    setUser(session.user);
+    return session;
+  };
+
+  const register = async (email: string, password: string, data?: any) => {
+    const user = await db.auth.register(email, password, data);
+    setUser(user);
+    return user;
+  };
+
+  const logout = async () => {
+    await db.auth.logout();
+    setUser(null);
+  };
+
+  return { user, loading, login, register, logout };
+}
+
+// components/LoginForm.tsx
+function LoginForm() {
+  const { login } = useAuth();
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    try {
+      await login(email, password);
+      // Redirect to dashboard
+    } catch (error) {
+      console.error('Login failed:', error);
+    }
+  };
+
+  return (
+    <form onSubmit={handleSubmit}>
+      <input
+        type="email"
+        value={email}
+        onChange={(e) => setEmail(e.target.value)}
+        placeholder="Email"
+      />
+      <input
+        type="password"
+        value={password}
+        onChange={(e) => setPassword(e.target.value)}
+        placeholder="Password"
+      />
+      <button type="submit">Login</button>
+    </form>
+  );
+}
+```
+
+## Authentication with Flutter
+
+Complete example for Flutter applications:
+
+```dart
+// providers/auth_provider.dart
+import 'package:flutter/foundation.dart';
+import 'package:coco_base_flutter/coco_base_flutter.dart';
+
+class AuthProvider with ChangeNotifier {
+  final Cocobase _db;
+  Map<String, dynamic>? _user;
+
+  AuthProvider(this._db) {
+    _loadUser();
+  }
+
+  Map<String, dynamic>? get user => _user;
+  bool get isAuthenticated => _user != null;
+
+  Future<void> _loadUser() async {
+    _user = await _db.getCurrentUser();
+    notifyListeners();
+  }
+
+  Future<void> login(String email, String password) async {
+    final session = await _db.login(email: email, password: password);
+    _user = session.user;
+    notifyListeners();
+  }
+
+  Future<void> register(String email, String password, Map<String, dynamic>? data) async {
+    final user = await _db.register(
+      email: email,
+      password: password,
+      data: data,
+    );
+    _user = user;
+    notifyListeners();
+  }
+
+  Future<void> logout() async {
+    await _db.logout();
+    _user = null;
+    notifyListeners();
+  }
+}
+
+// screens/login_screen.dart
+class LoginScreen extends StatelessWidget {
+  final _emailController = TextEditingController();
+  final _passwordController = TextEditingController();
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      body: Padding(
+        padding: EdgeInsets.all(16),
+        child: Column(
+          children: [
+            TextField(
+              controller: _emailController,
+              decoration: InputDecoration(labelText: 'Email'),
+            ),
+            TextField(
+              controller: _passwordController,
+              decoration: InputDecoration(labelText: 'Password'),
+              obscureText: true,
+            ),
+            ElevatedButton(
+              onPressed: () async {
+                await context.read<AuthProvider>().login(
+                  _emailController.text,
+                  _passwordController.text,
+                );
+              },
+              child: Text('Login'),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+```
+
+## Error Handling
+
+Common authentication errors and how to handle them:
+
+<Tabs>
+  <Tab title="JavaScript">
+    ```typescript
+    try {
+      await db.auth.login(email, password);
+    } catch (error) {
+      switch (error.code) {
+        case 'INVALID_CREDENTIALS':
+          console.error('Invalid email or password');
+          break;
+        case '2FA_REQUIRED':
+          console.log('2FA code required');
+          break;
+        case 'USER_NOT_FOUND':
+          console.error('User not found');
+          break;
+        case 'EMAIL_ALREADY_EXISTS':
+          console.error('Email already registered');
+          break;
+        default:
+          console.error('Authentication error:', error.message);
+      }
+    }
+    ```
+  </Tab>
+
+  <Tab title="Dart">
+    ```dart
+    try {
+      await db.login(email: email, password: password);
+    } catch (e) {
+      if (e is CocobaseException) {
+        switch (e.code) {
+          case 'INVALID_CREDENTIALS':
+            print('Invalid email or password');
+            break;
+          case '2FA_REQUIRED':
+            print('2FA code required');
+            break;
+          case 'USER_NOT_FOUND':
+            print('User not found');
+            break;
+          default:
+            print('Authentication error: ${e.message}');
+        }
+      }
+    }
+    ```
+  </Tab>
+
+  <Tab title="Go">
+    ```go
+    _, err := client.Login(ctx, email, password)
+    if err != nil {
+        switch {
+        case errors.Is(err, cocobase.ErrInvalidCredentials):
+            log.Println("Invalid email or password")
+        case errors.Is(err, cocobase.Err2FARequired):
+            log.Println("2FA code required")
+        case errors.Is(err, cocobase.ErrUserNotFound):
+            log.Println("User not found")
+        default:
+            log.Printf("Authentication error: %v", err)
+        }
+    }
+    ```
+  </Tab>
+
+  <Tab title="Python">
+    ```python
+    try:
+        db.auth.login(email, password)
+    except InvalidCredentialsError:
+        print("Invalid email or password")
+    except TwoFactorRequiredError:
+        print("2FA code required")
+    except UserNotFoundError:
+        print("User not found")
+    except CocobaseError as e:
+        print(f"Authentication error: {e}")
+    ```
+  </Tab>
+
+  <Tab title="HTTP">
+    HTTP status codes:
+    - `400` - Invalid request
+    - `401` - Invalid credentials
+    - `403` - 2FA required
+    - `404` - User not found
+    - `409` - Email already exists
+    - `500` - Server error
+  </Tab>
+</Tabs>
+
+## Best Practices
+
+<AccordionGroup>
+  <Accordion title="Secure Password Storage">
+    Never store passwords in plain text. Use environment variables and secure storage:
+    ```typescript
+    // ✅ Good
+    const password = process.env.USER_PASSWORD;
+
+    // ❌ Bad
+    const password = "hardcoded_password123";
+    ```
+  </Accordion>
+
+  <Accordion title="Token Security">
+    Tokens are automatically stored securely:
+    - **Browser**: localStorage (with HttpOnly flag)
+    - **Mobile**: Secure storage (Keychain/Keystore)
+    - **Server**: Memory or secure storage backend
+  </Accordion>
+
+  <Accordion title="Session Management">
+    Implement automatic token refresh and session validation:
+    ```typescript
+    // Check session on app start
+    const user = db.auth.getCurrentUser();
+    if (user) {
+      try {
+        await db.auth.fetchCurrentUser(); // Validates token
+      } catch (error) {
+        // Token expired, redirect to login
+        await db.auth.logout();
+      }
+    }
+    ```
+  </Accordion>
+
+  <Accordion title="Password Requirements">
+    Enforce strong password requirements:
+    - Minimum 8 characters
+    - Mix of uppercase, lowercase, numbers
+    - Consider special characters
+    - Implement password strength meter
+  </Accordion>
+</AccordionGroup>
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="CRUD Operations" icon="database" href="/features/crud-operations">
+    Learn to create, read, update, and delete data
+  </Card>
+  <Card title="User Profiles" icon="user" href="/examples/user-profiles">
+    Build complete user profile management
+  </Card>
+  <Card title="Protected Routes" icon="shield" href="/examples/protected-routes">
+    Secure your application routes
+  </Card>
+  <Card title="Social Login" icon="users" href="/examples/social-login">
+    Implement OAuth authentication
+  </Card>
+</CardGroup>

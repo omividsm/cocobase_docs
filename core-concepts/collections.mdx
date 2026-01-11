@@ -1,0 +1,518 @@
+---
+title: Collections & Documents
+description: Understanding data organization in Cocobase
+icon: database
+---
+
+# Collections & Documents
+
+Cocobase uses a **document-based** data model similar to MongoDB and Firestore. Data is organized into **collections** containing **documents** (JSON objects).
+
+## What is a Collection?
+
+A collection is a group of related documents. Think of it like a table in a relational database, but without a fixed schema.
+
+**Examples:**
+- `users` - User profiles and account data
+- `posts` - Blog posts or social media content
+- `products` - E-commerce product catalog
+- `orders` - Customer orders
+
+## What is a Document?
+
+A document is a JSON object containing your data. Each document has:
+- **`_id`** - Unique identifier (auto-generated)
+- **`createdAt`** - Creation timestamp (auto-generated)
+- **`updatedAt`** - Last update timestamp (auto-generated)
+- **Your custom fields** - Any JSON-serializable data
+
+**Example Document:**
+```json
+{
+  "_id": "507f1f77bcf86cd799439011",
+  "name": "Alice Johnson",
+  "email": "alice@example.com",
+  "age": 28,
+  "role": "developer",
+  "preferences": {
+    "theme": "dark",
+    "notifications": true
+  },
+  "tags": ["javascript", "react", "nodejs"],
+  "createdAt": "2024-01-15T10:30:00Z",
+  "updatedAt": "2024-01-15T10:30:00Z"
+}
+```
+
+## Schema-less Design
+
+Collections in Cocobase are **schema-less** - documents in the same collection can have different fields.
+
+<Tabs>
+  <Tab title="JavaScript">
+    ```typescript
+    // These can all exist in the same collection
+    await db.createDocument("products", {
+      type: "book",
+      title: "Learning TypeScript",
+      author: "John Doe",
+      pages: 350
+    });
+
+    await db.createDocument("products", {
+      type: "laptop",
+      brand: "Apple",
+      model: "MacBook Pro",
+      specs: {
+        ram: "16GB",
+        storage: "512GB"
+      }
+    });
+    ```
+  </Tab>
+
+  <Tab title="Dart">
+    ```dart
+    // Different structures, same collection
+    await db.createDocument('products', {
+      'type': 'book',
+      'title': 'Learning TypeScript',
+      'author': 'John Doe',
+      'pages': 350,
+    });
+
+    await db.createDocument('products', {
+      'type': 'laptop',
+      'brand': 'Apple',
+      'model': 'MacBook Pro',
+      'specs': {
+        'ram': '16GB',
+        'storage': '512GB',
+      },
+    });
+    ```
+  </Tab>
+
+  <Tab title="Go">
+    ```go
+    // Flexible document structures
+    db.CreateDocument(ctx, "products", map[string]any{
+        "type":   "book",
+        "title":  "Learning TypeScript",
+        "author": "John Doe",
+        "pages":  350,
+    })
+
+    db.CreateDocument(ctx, "products", map[string]any{
+        "type":  "laptop",
+        "brand": "Apple",
+        "model": "MacBook Pro",
+        "specs": map[string]any{
+            "ram":     "16GB",
+            "storage": "512GB",
+        },
+    })
+    ```
+  </Tab>
+
+  <Tab title="Python">
+    ```python
+    # Schema-less flexibility
+    db.create_document("products", {
+        "type": "book",
+        "title": "Learning TypeScript",
+        "author": "John Doe",
+        "pages": 350
+    })
+
+    db.create_document("products", {
+        "type": "laptop",
+        "brand": "Apple",
+        "model": "MacBook Pro",
+        "specs": {
+            "ram": "16GB",
+            "storage": "512GB"
+        }
+    })
+    ```
+  </Tab>
+</Tabs>
+
+## Supported Data Types
+
+Cocobase supports all JSON data types:
+
+| Type | Description | Example |
+|------|-------------|---------|
+| **String** | Text data | `"Hello World"` |
+| **Number** | Integers and floats | `42`, `3.14` |
+| **Boolean** | True/false values | `true`, `false` |
+| **Array** | Ordered lists | `[1, 2, 3]`, `["a", "b"]` |
+| **Object** | Nested objects | `{ "name": "John" }` |
+| **Null** | Null value | `null` |
+| **Date** | ISO 8601 strings | `"2024-01-15T10:30:00Z"` |
+
+### Nested Objects
+
+You can nest objects as deeply as needed:
+
+```json
+{
+  "user": {
+    "name": "Alice",
+    "address": {
+      "street": "123 Main St",
+      "city": "New York",
+      "geo": {
+        "lat": 40.7128,
+        "lng": -74.0060
+      }
+    }
+  }
+}
+```
+
+### Arrays
+
+Arrays can contain any data type:
+
+```json
+{
+  "tags": ["javascript", "react", "nodejs"],
+  "scores": [85, 92, 78],
+  "metadata": [
+    { "key": "category", "value": "tech" },
+    { "key": "priority", "value": 1 }
+  ]
+}
+```
+
+## Collection Naming
+
+**Best practices for naming collections:**
+
+- Use **lowercase** - `users`, not `Users`
+- Use **plural** - `posts`, not `post`
+- Use **underscores** for multi-word - `blog_posts`
+- Keep names **descriptive** - `product_reviews`, not `pr`
+- Avoid special characters except `_` and `-`
+
+**Good names:**
+```
+users
+blog_posts
+product_reviews
+order_items
+user_preferences
+```
+
+**Avoid:**
+```
+User          // Not plural
+blogPost      // Use snake_case
+pr            // Too short
+product$      // Special characters
+123_test      // Starting with number
+```
+
+## Document IDs
+
+Every document has a unique `_id` field:
+
+<Tabs>
+  <Tab title="Auto-generated">
+    ```typescript
+    // Cocobase generates a unique ID
+    const doc = await db.createDocument("users", {
+      name: "Alice"
+    });
+
+    console.log(doc._id); // "507f1f77bcf86cd799439011"
+    ```
+  </Tab>
+
+  <Tab title="Custom ID">
+    ```typescript
+    // Provide your own ID
+    const doc = await db.createDocument("users", {
+      _id: "user_alice_2024",
+      name: "Alice"
+    });
+
+    console.log(doc._id); // "user_alice_2024"
+    ```
+  </Tab>
+</Tabs>
+
+<Warning>
+  Custom IDs must be unique within the collection. Attempting to create a document with an existing ID will fail.
+</Warning>
+
+## Automatic Fields
+
+Cocobase automatically adds these fields to every document:
+
+### `_id` - Unique Identifier
+```json
+{
+  "_id": "507f1f77bcf86cd799439011"
+}
+```
+
+### `createdAt` - Creation Timestamp
+```json
+{
+  "createdAt": "2024-01-15T10:30:00Z"
+}
+```
+
+### `updatedAt` - Last Update Timestamp
+```json
+{
+  "updatedAt": "2024-01-15T15:45:00Z"
+}
+```
+
+<Note>
+  These fields are managed automatically. You cannot override them when creating or updating documents.
+</Note>
+
+## Collection Operations
+
+### Create a Collection
+
+Collections are created automatically when you insert the first document:
+
+<Tabs>
+  <Tab title="JavaScript">
+    ```typescript
+    // Collection "users" is created automatically
+    await db.createDocument("users", {
+      name: "Alice"
+    });
+    ```
+  </Tab>
+
+  <Tab title="Dart">
+    ```dart
+    // Collection is created on first insert
+    await db.createDocument('users', {
+      'name': 'Alice',
+    });
+    ```
+  </Tab>
+
+  <Tab title="Go">
+    ```go
+    // Auto-creates collection
+    db.CreateDocument(ctx, "users", map[string]any{
+        "name": "Alice",
+    })
+    ```
+  </Tab>
+
+  <Tab title="Python">
+    ```python
+    # Collection created automatically
+    db.create_document("users", {
+        "name": "Alice"
+    })
+    ```
+  </Tab>
+</Tabs>
+
+### List Collections
+
+<Tabs>
+  <Tab title="JavaScript">
+    ```typescript
+    const collections = await db.listCollections();
+    console.log(collections); // ["users", "posts", "products"]
+    ```
+  </Tab>
+
+  <Tab title="Dart">
+    ```dart
+    final collections = await db.listCollections();
+    print(collections); // ["users", "posts", "products"]
+    ```
+  </Tab>
+
+  <Tab title="Go">
+    ```go
+    collections, err := db.ListCollections(ctx)
+    // ["users", "posts", "products"]
+    ```
+  </Tab>
+
+  <Tab title="Python">
+    ```python
+    collections = db.list_collections()
+    print(collections)  # ["users", "posts", "products"]
+    ```
+  </Tab>
+</Tabs>
+
+### Delete a Collection
+
+<Warning>
+  Deleting a collection permanently removes all documents. This action cannot be undone.
+</Warning>
+
+<Tabs>
+  <Tab title="JavaScript">
+    ```typescript
+    await db.deleteCollection("old_data");
+    ```
+  </Tab>
+
+  <Tab title="Dart">
+    ```dart
+    await db.deleteCollection('old_data');
+    ```
+  </Tab>
+
+  <Tab title="Go">
+    ```go
+    err := db.DeleteCollection(ctx, "old_data")
+    ```
+  </Tab>
+
+  <Tab title="Python">
+    ```python
+    db.delete_collection("old_data")
+    ```
+  </Tab>
+</Tabs>
+
+## Document Size Limits
+
+- **Maximum document size**: 16 MB
+- **Maximum nesting depth**: 100 levels
+- **Maximum array length**: 100,000 elements
+
+<Note>
+  For large files (images, videos, documents), use [File Storage](/features/file-storage) instead of embedding in documents.
+</Note>
+
+## Best Practices
+
+<AccordionGroup>
+  <Accordion title="Keep Documents Focused">
+    Each document should represent a single entity. Don't try to store your entire application state in one document.
+
+    ```typescript
+    // ✅ Good - Focused document
+    {
+      "_id": "user_123",
+      "name": "Alice",
+      "email": "alice@example.com"
+    }
+
+    // ❌ Bad - Too much data
+    {
+      "_id": "user_123",
+      "name": "Alice",
+      "posts": [...100 posts...],
+      "comments": [...500 comments...],
+      "friends": [...200 friends...]
+    }
+    ```
+  </Accordion>
+
+  <Accordion title="Use Relationships for Related Data">
+    Instead of embedding everything, use document references and population.
+
+    ```typescript
+    // ✅ Good - Use references
+    {
+      "_id": "post_456",
+      "title": "My Post",
+      "authorId": "user_123"  // Reference to user
+    }
+
+    // Then populate when needed
+    const posts = await db.listDocuments("posts", {
+      populate: ["authorId"]
+    });
+    ```
+  </Accordion>
+
+  <Accordion title="Index Frequently Queried Fields">
+    Add indexes for fields you query often to improve performance.
+
+    ```typescript
+    // Create index on email field
+    await db.createIndex("users", "email");
+
+    // Queries on email will be faster
+    const user = await db.listDocuments("users", {
+      filters: { email: { $eq: "alice@example.com" } }
+    });
+    ```
+  </Accordion>
+
+  <Accordion title="Use Consistent Field Names">
+    Stick to a naming convention across your application.
+
+    ```typescript
+    // ✅ Good - Consistent naming
+    {
+      "userId": "user_123",
+      "createdBy": "user_456",
+      "assignedTo": "user_789"
+    }
+
+    // ❌ Bad - Inconsistent
+    {
+      "userId": "user_123",
+      "creator": "user_456",
+      "assigned_user_id": "user_789"
+    }
+    ```
+  </Accordion>
+</AccordionGroup>
+
+## Type Safety (TypeScript)
+
+Use TypeScript interfaces for type-safe operations:
+
+```typescript
+interface User {
+  _id: string;
+  name: string;
+  email: string;
+  age?: number;
+  role: 'admin' | 'user' | 'moderator';
+  createdAt: string;
+  updatedAt: string;
+}
+
+// Type-safe create
+const user = await db.createDocument<User>("users", {
+  name: "Alice",
+  email: "alice@example.com",
+  role: "user"
+});
+
+// user is typed as User
+console.log(user.name); // ✅ TypeScript knows this exists
+console.log(user.foo);  // ❌ TypeScript error
+```
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="CRUD Operations" icon="database" href="/features/crud-operations">
+    Learn to create, read, update, and delete documents
+  </Card>
+  <Card title="Querying Data" icon="filter" href="/features/querying">
+    Master filtering and searching your collections
+  </Card>
+  <Card title="Relationships" icon="link" href="/features/relationships">
+    Connect documents with references
+  </Card>
+  <Card title="Data Types" icon="code" href="/core-concepts/data-types">
+    Deep dive into supported data types
+  </Card>
+</CardGroup>

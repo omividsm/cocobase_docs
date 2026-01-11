@@ -1,0 +1,1284 @@
+---
+title: "CRUD Operations"
+description: "Master the fundamental database operations with multi-language support"
+---
+
+# CRUD Operations
+
+Master the four fundamental database operations: **Create**, **Read**, **Update**, and **Delete** across all platforms.
+
+<Note>
+  CRUD operations are the building blocks of any application. Cocobase makes
+  them simple, intuitive, and consistent across all languages.
+</Note>
+
+## Overview
+
+Cocobase provides type-safe, efficient CRUD operations for all supported platforms:
+
+- **Create** - Add new documents to collections
+- **Read** - Retrieve documents by ID or with filters
+- **Update** - Modify existing documents (partial or full)
+- **Delete** - Remove documents from collections
+- **Batch Operations** - Perform multiple operations at once
+
+---
+
+## Create Documents
+
+Add new documents to your collections with automatic ID generation and timestamp tracking.
+
+### Basic Creation
+
+<Tabs>
+<Tab title="JavaScript">
+```javascript
+import { Cocobase } from 'cocobase';
+
+const db = new Cocobase({ apiKey: 'your-api-key' });
+
+// Create a single document
+const user = await db.createDocument('users', {
+  name: 'John Doe',
+  email: 'john@example.com',
+  age: 30,
+  active: true
+});
+
+console.log('Created user:', user.id);
+```
+</Tab>
+
+<Tab title="Dart">
+```dart
+import 'package:cocobase/cocobase.dart';
+
+final db = Cocobase(CocobaseConfig(apiKey: 'your-api-key'));
+
+// Create a single document
+final user = await db.createDocument('users', {
+  'name': 'John Doe',
+  'email': 'john@example.com',
+  'age': 30,
+  'active': true,
+});
+
+print('Created user: ${user.id}');
+```
+</Tab>
+
+<Tab title="Go">
+```go
+package main
+
+import (
+    "context"
+    "fmt"
+    "log"
+    "github.com/lordace-coder/cocobase-go/cocobase"
+)
+
+func main() {
+    client := cocobase.NewClient(cocobase.Config{
+        APIKey: "your-api-key",
+    })
+
+    ctx := context.Background()
+
+    // Create a single document
+    data := map[string]interface{}{
+        "name":   "John Doe",
+        "email":  "john@example.com",
+        "age":    30,
+        "active": true,
+    }
+
+    doc, err := client.CreateDocument(ctx, "users", data)
+    if err != nil {
+        log.Fatal(err)
+    }
+
+    fmt.Printf("Created user: %s\n", doc.ID)
+}
+```
+</Tab>
+
+<Tab title="Python">
+```python
+import requests
+
+API_KEY = 'your-api-key'
+BASE_URL = 'https://api.cocobase.buzz'
+headers = {'X-API-Key': API_KEY, 'Content-Type': 'application/json'}
+
+# Create a single document
+user_data = {
+    'name': 'John Doe',
+    'email': 'john@example.com',
+    'age': 30,
+    'active': True
+}
+
+response = requests.post(
+    f'{BASE_URL}/collections/users/documents',
+    headers=headers,
+    json=user_data
+)
+
+user = response.json()
+print(f"Created user: {user['id']}")
+```
+</Tab>
+
+<Tab title="HTTP">
+```bash
+curl -X POST https://api.cocobase.buzz/collections/users/documents \
+  -H "X-API-Key: your-api-key" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "name": "John Doe",
+    "email": "john@example.com",
+    "age": 30,
+    "active": true
+  }'
+```
+</Tab>
+</Tabs>
+
+### Type-Safe Creation
+
+<Tabs>
+<Tab title="JavaScript">
+```typescript
+interface User {
+  name: string;
+  email: string;
+  age: number;
+  active: boolean;
+}
+
+const user = await db.createDocument<User>('users', {
+  name: 'Jane Smith',
+  email: 'jane@example.com',
+  age: 28,
+  active: true
+});
+
+// TypeScript knows the structure
+console.log(user.data.name); // ✓ Type-safe
+```
+</Tab>
+
+<Tab title="Dart">
+```dart
+class User {
+  final String name;
+  final String email;
+  final int age;
+  final bool active;
+
+  User({
+    required this.name,
+    required this.email,
+    required this.age,
+    required this.active,
+  });
+
+  factory User.fromJson(Map<String, dynamic> json) {
+    return User(
+      name: json['name'],
+      email: json['email'],
+      age: json['age'],
+      active: json['active'],
+    );
+  }
+
+  Map<String, dynamic> toJson() => {
+    'name': name,
+    'email': email,
+    'age': age,
+    'active': active,
+  };
+}
+
+final user = await db.createDocument<User>(
+  'users',
+  User(
+    name: 'Jane Smith',
+    email: 'jane@example.com',
+    age: 28,
+    active: true,
+  ).toJson(),
+  converter: User.fromJson,
+);
+
+print('Created: ${user.data.name}');
+```
+</Tab>
+
+<Tab title="Go">
+```go
+type User struct {
+    Name   string `json:"name"`
+    Email  string `json:"email"`
+    Age    int    `json:"age"`
+    Active bool   `json:"active"`
+}
+
+data := map[string]interface{}{
+    "name":   "Jane Smith",
+    "email":  "jane@example.com",
+    "age":    28,
+    "active": true,
+}
+
+doc, err := client.CreateDocument(ctx, "users", data)
+if err != nil {
+    log.Fatal(err)
+}
+
+// Type assertion
+if name, ok := doc.Data["name"].(string); ok {
+    fmt.Printf("Created: %s\n", name)
+}
+```
+</Tab>
+
+<Tab title="Python">
+```python
+from typing import TypedDict
+
+class User(TypedDict):
+    name: str
+    email: str
+    age: int
+    active: bool
+
+user_data: User = {
+    'name': 'Jane Smith',
+    'email': 'jane@example.com',
+    'age': 28,
+    'active': True
+}
+
+response = requests.post(
+    f'{BASE_URL}/collections/users/documents',
+    headers=headers,
+    json=user_data
+)
+
+user = response.json()
+print(f"Created: {user['name']}")
+```
+</Tab>
+
+<Tab title="HTTP">
+```bash
+# HTTP requests are inherently untyped
+# Use JSON schema validation if needed
+curl -X POST https://api.cocobase.buzz/collections/users/documents \
+  -H "X-API-Key: your-api-key" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "name": "Jane Smith",
+    "email": "jane@example.com",
+    "age": 28,
+    "active": true
+  }'
+```
+</Tab>
+</Tabs>
+
+### Batch Creation
+
+Create multiple documents in a single operation for better performance.
+
+<Tabs>
+<Tab title="JavaScript">
+```javascript
+const users = await db.createDocuments('users', [
+  { name: 'Alice', email: 'alice@example.com', age: 25 },
+  { name: 'Bob', email: 'bob@example.com', age: 32 },
+  { name: 'Charlie', email: 'charlie@example.com', age: 28 }
+]);
+
+console.log(`Created ${users.length} users`);
+```
+</Tab>
+
+<Tab title="Dart">
+```dart
+final users = [
+  {'name': 'Alice', 'email': 'alice@example.com', 'age': 25},
+  {'name': 'Bob', 'email': 'bob@example.com', 'age': 32},
+  {'name': 'Charlie', 'email': 'charlie@example.com', 'age': 28},
+];
+
+for (var userData in users) {
+  await db.createDocument('users', userData);
+}
+```
+</Tab>
+
+<Tab title="Go">
+```go
+// Batch creation via API
+users := []map[string]interface{}{
+    {"name": "Alice", "email": "alice@example.com", "age": 25},
+    {"name": "Bob", "email": "bob@example.com", "age": 32},
+    {"name": "Charlie", "email": "charlie@example.com", "age": 28},
+}
+
+for _, userData := range users {
+    _, err := client.CreateDocument(ctx, "users", userData)
+    if err != nil {
+        log.Printf("Error creating user: %v\n", err)
+    }
+}
+```
+</Tab>
+
+<Tab title="Python">
+```python
+users = [
+    {'name': 'Alice', 'email': 'alice@example.com', 'age': 25},
+    {'name': 'Bob', 'email': 'bob@example.com', 'age': 32},
+    {'name': 'Charlie', 'email': 'charlie@example.com', 'age': 28}
+]
+
+# Batch create via API endpoint
+response = requests.post(
+    f'{BASE_URL}/collections/users/batch/documents',
+    headers=headers,
+    json={'documents': users}
+)
+
+created_users = response.json()
+print(f"Created {len(created_users)} users")
+```
+</Tab>
+
+<Tab title="HTTP">
+```bash
+curl -X POST https://api.cocobase.buzz/collections/users/batch/documents \
+  -H "X-API-Key: your-api-key" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "documents": [
+      {"name": "Alice", "email": "alice@example.com", "age": 25},
+      {"name": "Bob", "email": "bob@example.com", "age": 32},
+      {"name": "Charlie", "email": "charlie@example.com", "age": 28}
+    ]
+  }'
+```
+</Tab>
+</Tabs>
+
+---
+
+## Read Documents
+
+Retrieve documents by ID, or query collections with filters and pagination.
+
+### Get Single Document
+
+<Tabs>
+<Tab title="JavaScript">
+```javascript
+const user = await db.getDocument('users', 'user-123');
+console.log(user.data);
+```
+</Tab>
+
+<Tab title="Dart">
+```dart
+final user = await db.getDocument('users', 'user-123');
+print('User: ${user.data}');
+```
+</Tab>
+
+<Tab title="Go">
+```go
+doc, err := client.GetDocument(ctx, "users", "user-123")
+if err != nil {
+    if apiErr, ok := err.(*cocobase.APIError); ok {
+        if apiErr.StatusCode == 404 {
+            fmt.Println("Document not found")
+            return
+        }
+    }
+    log.Fatal(err)
+}
+
+fmt.Printf("User: %+v\n", doc.Data)
+```
+</Tab>
+
+<Tab title="Python">
+```python
+response = requests.get(
+    f'{BASE_URL}/collections/users/documents/user-123',
+    headers=headers
+)
+
+user = response.json()
+print(f"User: {user}")
+```
+</Tab>
+
+<Tab title="HTTP">
+```bash
+curl https://api.cocobase.buzz/collections/users/documents/user-123 \
+  -H "X-API-Key: your-api-key"
+```
+</Tab>
+</Tabs>
+
+### List All Documents
+
+<Tabs>
+<Tab title="JavaScript">
+```javascript
+const allUsers = await db.listDocuments('users');
+console.log(`Total users: ${allUsers.length}`);
+```
+</Tab>
+
+<Tab title="Dart">
+```dart
+final allUsers = await db.listDocuments('users');
+print('Total users: ${allUsers.length}');
+```
+</Tab>
+
+<Tab title="Go">
+```go
+docs, err := client.ListDocuments(ctx, "users", nil)
+if err != nil {
+    log.Fatal(err)
+}
+
+fmt.Printf("Total users: %d\n", len(docs))
+```
+</Tab>
+
+<Tab title="Python">
+```python
+response = requests.get(
+    f'{BASE_URL}/collections/users/documents',
+    headers=headers
+)
+
+result = response.json()
+print(f"Total users: {result['total']}")
+```
+</Tab>
+
+<Tab title="HTTP">
+```bash
+curl https://api.cocobase.buzz/collections/users/documents \
+  -H "X-API-Key: your-api-key"
+```
+</Tab>
+</Tabs>
+
+### With Filters
+
+<Tabs>
+<Tab title="JavaScript">
+```javascript
+// Get active users
+const activeUsers = await db.listDocuments('users', {
+  filters: { active: true }
+});
+
+// Get users older than 25
+const olderUsers = await db.listDocuments('users', {
+  filters: { age_gte: 25 }
+});
+
+// Multiple filters (AND logic)
+const specificUsers = await db.listDocuments('users', {
+  filters: {
+    active: true,
+    age_gte: 25,
+    age_lte: 40
+  }
+});
+```
+</Tab>
+
+<Tab title="Dart">
+```dart
+// Get active users
+final activeUsers = await db.listDocuments('users', filters: {
+  'active': true,
+});
+
+// Get users older than 25
+final olderUsers = await db.listDocuments('users', filters: {
+  'age__gte': 25,
+});
+
+// Multiple filters (AND logic)
+final specificUsers = await db.listDocuments('users', filters: {
+  'active': true,
+  'age__gte': 25,
+  'age__lte': 40,
+});
+```
+</Tab>
+
+<Tab title="Go">
+```go
+// Get active users
+query := cocobase.NewQuery().Where("active", true)
+activeUsers, err := client.ListDocuments(ctx, "users", query)
+
+// Get users older than 25
+query = cocobase.NewQuery().GreaterThanOrEqual("age", 25)
+olderUsers, err := client.ListDocuments(ctx, "users", query)
+
+// Multiple filters (AND logic)
+query = cocobase.NewQuery().
+    Where("active", true).
+    GreaterThanOrEqual("age", 25).
+    LessThanOrEqual("age", 40)
+specificUsers, err := client.ListDocuments(ctx, "users", query)
+```
+</Tab>
+
+<Tab title="Python">
+```python
+# Get active users
+params = {'active': 'true'}
+response = requests.get(
+    f'{BASE_URL}/collections/users/documents',
+    headers=headers,
+    params=params
+)
+
+# Get users older than 25
+params = {'age_gte': 25}
+response = requests.get(
+    f'{BASE_URL}/collections/users/documents',
+    headers=headers,
+    params=params
+)
+
+# Multiple filters (AND logic)
+params = {
+    'active': 'true',
+    'age_gte': 25,
+    'age_lte': 40
+}
+response = requests.get(
+    f'{BASE_URL}/collections/users/documents',
+    headers=headers,
+    params=params
+)
+```
+</Tab>
+
+<Tab title="HTTP">
+```bash
+# Get active users
+curl "https://api.cocobase.buzz/collections/users/documents?active=true" \
+  -H "X-API-Key: your-api-key"
+
+# Get users older than 25
+curl "https://api.cocobase.buzz/collections/users/documents?age_gte=25" \
+  -H "X-API-Key: your-api-key"
+
+# Multiple filters (AND logic)
+curl "https://api.cocobase.buzz/collections/users/documents?active=true&age_gte=25&age_lte=40" \
+  -H "X-API-Key: your-api-key"
+```
+</Tab>
+</Tabs>
+
+### With Pagination
+
+<Tabs>
+<Tab title="JavaScript">
+```javascript
+// Get first page (10 users)
+const page1 = await db.listDocuments('users', {
+  limit: 10,
+  offset: 0
+});
+
+// Get second page
+const page2 = await db.listDocuments('users', {
+  limit: 10,
+  offset: 10
+});
+
+// Helper function
+function getPage(pageNumber, pageSize = 10) {
+  return db.listDocuments('users', {
+    limit: pageSize,
+    offset: (pageNumber - 1) * pageSize
+  });
+}
+
+const page3 = await getPage(3); // Users 21-30
+```
+</Tab>
+
+<Tab title="Dart">
+```dart
+// Get first page (10 users)
+final page1 = await db.listDocuments('users', filters: {
+  'limit': 10,
+  'offset': 0,
+});
+
+// Get second page
+final page2 = await db.listDocuments('users', filters: {
+  'limit': 10,
+  'offset': 10,
+});
+
+// Using QueryBuilder
+final page3 = await db.listDocuments(
+  'users',
+  queryBuilder: QueryBuilder().limit(10).offset(20),
+);
+```
+</Tab>
+
+<Tab title="Go">
+```go
+// Get first page (10 users)
+query := cocobase.NewQuery().Limit(10).Offset(0)
+page1, err := client.ListDocuments(ctx, "users", query)
+
+// Get second page
+query = cocobase.NewQuery().Limit(10).Offset(10)
+page2, err := client.ListDocuments(ctx, "users", query)
+
+// Helper function
+func getPage(client *cocobase.Client, page, perPage int) ([]cocobase.Document, error) {
+    query := cocobase.NewQuery().
+        Limit(perPage).
+        Offset((page - 1) * perPage)
+
+    return client.ListDocuments(ctx, "users", query)
+}
+
+page3, err := getPage(client, 3, 10) // Users 21-30
+```
+</Tab>
+
+<Tab title="Python">
+```python
+# Get first page (10 users)
+params = {'limit': 10, 'offset': 0}
+response = requests.get(
+    f'{BASE_URL}/collections/users/documents',
+    headers=headers,
+    params=params
+)
+
+# Get second page
+params = {'limit': 10, 'offset': 10}
+response = requests.get(
+    f'{BASE_URL}/collections/users/documents',
+    headers=headers,
+    params=params
+)
+
+# Helper function
+def get_page(page_number, page_size=10):
+    params = {
+        'limit': page_size,
+        'offset': (page_number - 1) * page_size
+    }
+    response = requests.get(
+        f'{BASE_URL}/collections/users/documents',
+        headers=headers,
+        params=params
+    )
+    return response.json()
+
+page3 = get_page(3)  # Users 21-30
+```
+</Tab>
+
+<Tab title="HTTP">
+```bash
+# Get first page (10 users)
+curl "https://api.cocobase.buzz/collections/users/documents?limit=10&offset=0" \
+  -H "X-API-Key: your-api-key"
+
+# Get second page
+curl "https://api.cocobase.buzz/collections/users/documents?limit=10&offset=10" \
+  -H "X-API-Key: your-api-key"
+
+# Get page 3
+curl "https://api.cocobase.buzz/collections/users/documents?limit=10&offset=20" \
+  -H "X-API-Key: your-api-key"
+```
+</Tab>
+</Tabs>
+
+---
+
+## Update Documents
+
+Modify existing documents with partial or full updates.
+
+### Basic Update
+
+<Tabs>
+<Tab title="JavaScript">
+```javascript
+await db.updateDocument('users', 'user-123', {
+  age: 31,
+  active: false
+});
+
+console.log('User updated');
+```
+</Tab>
+
+<Tab title="Dart">
+```dart
+await db.updateDocument('users', 'user-123', {
+  'age': 31,
+  'active': false,
+});
+
+print('User updated');
+```
+</Tab>
+
+<Tab title="Go">
+```go
+updates := map[string]interface{}{
+    "age":    31,
+    "active": false,
+}
+
+doc, err := client.UpdateDocument(ctx, "users", "user-123", updates)
+if err != nil {
+    log.Fatal(err)
+}
+
+fmt.Println("User updated")
+```
+</Tab>
+
+<Tab title="Python">
+```python
+updates = {
+    'age': 31,
+    'active': False
+}
+
+response = requests.patch(
+    f'{BASE_URL}/collections/users/documents/user-123',
+    headers=headers,
+    json=updates
+)
+
+print("User updated")
+```
+</Tab>
+
+<Tab title="HTTP">
+```bash
+curl -X PATCH https://api.cocobase.buzz/collections/users/documents/user-123 \
+  -H "X-API-Key: your-api-key" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "age": 31,
+    "active": false
+  }'
+```
+</Tab>
+</Tabs>
+
+<Note>
+  Updates are **partial** by default - you only need to provide the fields you
+  want to change. Other fields remain unchanged.
+</Note>
+
+### Batch Update
+
+<Tabs>
+<Tab title="JavaScript">
+```javascript
+// Update multiple documents at once
+await db.updateDocuments('users', {
+  'user-1': { age: 31 },
+  'user-2': { age: 29 },
+  'user-3': { active: false }
+});
+```
+</Tab>
+
+<Tab title="Dart">
+```dart
+// Update documents individually
+final updates = {
+  'user-1': {'age': 31},
+  'user-2': {'age': 29},
+  'user-3': {'active': false},
+};
+
+for (var entry in updates.entries) {
+  await db.updateDocument('users', entry.key, entry.value);
+}
+```
+</Tab>
+
+<Tab title="Go">
+```go
+// Update documents individually
+updates := map[string]map[string]interface{}{
+    "user-1": {"age": 31},
+    "user-2": {"age": 29},
+    "user-3": {"active": false},
+}
+
+for docID, data := range updates {
+    _, err := client.UpdateDocument(ctx, "users", docID, data)
+    if err != nil {
+        log.Printf("Failed to update %s: %v\n", docID, err)
+    }
+}
+```
+</Tab>
+
+<Tab title="Python">
+```python
+# Batch update via API
+updates = {
+    'user-1': {'data': {'age': 31}},
+    'user-2': {'data': {'age': 29}},
+    'user-3': {'data': {'active': False}}
+}
+
+response = requests.post(
+    f'{BASE_URL}/collections/users/batch/documents/update',
+    headers=headers,
+    json={'updates': updates}
+)
+```
+</Tab>
+
+<Tab title="HTTP">
+```bash
+curl -X POST https://api.cocobase.buzz/collections/users/batch/documents/update \
+  -H "X-API-Key: your-api-key" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "updates": {
+      "user-1": {"data": {"age": 31}},
+      "user-2": {"data": {"age": 29}},
+      "user-3": {"data": {"active": false}}
+    }
+  }'
+```
+</Tab>
+</Tabs>
+
+---
+
+## Delete Documents
+
+Remove documents from collections permanently.
+
+### Delete Single Document
+
+<Tabs>
+<Tab title="JavaScript">
+```javascript
+await db.deleteDocument('users', 'user-123');
+console.log('User deleted');
+```
+</Tab>
+
+<Tab title="Dart">
+```dart
+await db.deleteDocument('users', 'user-123');
+print('User deleted');
+```
+</Tab>
+
+<Tab title="Go">
+```go
+err := client.DeleteDocument(ctx, "users", "user-123")
+if err != nil {
+    log.Fatal(err)
+}
+
+fmt.Println("User deleted")
+```
+</Tab>
+
+<Tab title="Python">
+```python
+response = requests.delete(
+    f'{BASE_URL}/collections/users/documents/user-123',
+    headers=headers
+)
+
+print("User deleted")
+```
+</Tab>
+
+<Tab title="HTTP">
+```bash
+curl -X DELETE https://api.cocobase.buzz/collections/users/documents/user-123 \
+  -H "X-API-Key: your-api-key"
+```
+</Tab>
+</Tabs>
+
+### Batch Delete
+
+<Tabs>
+<Tab title="JavaScript">
+```javascript
+const idsToDelete = ['user-1', 'user-2', 'user-3'];
+
+const result = await db.deleteDocuments('users', idsToDelete);
+console.log(`Deleted ${result.count} documents`);
+```
+</Tab>
+
+<Tab title="Dart">
+```dart
+final idsToDelete = ['user-1', 'user-2', 'user-3'];
+
+for (var id in idsToDelete) {
+  await db.deleteDocument('users', id);
+}
+
+print('Deleted ${idsToDelete.length} documents');
+```
+</Tab>
+
+<Tab title="Go">
+```go
+idsToDelete := []string{"user-1", "user-2", "user-3"}
+
+for _, id := range idsToDelete {
+    err := client.DeleteDocument(ctx, "users", id)
+    if err != nil {
+        log.Printf("Failed to delete %s: %v\n", id, err)
+    }
+}
+```
+</Tab>
+
+<Tab title="Python">
+```python
+ids_to_delete = ['user-1', 'user-2', 'user-3']
+
+response = requests.post(
+    f'{BASE_URL}/collections/users/batch/documents/delete',
+    headers=headers,
+    json={'document_ids': ids_to_delete}
+)
+
+result = response.json()
+print(f"Deleted {result['count']} documents")
+```
+</Tab>
+
+<Tab title="HTTP">
+```bash
+curl -X POST https://api.cocobase.buzz/collections/users/batch/documents/delete \
+  -H "X-API-Key: your-api-key" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "document_ids": ["user-1", "user-2", "user-3"]
+  }'
+```
+</Tab>
+</Tabs>
+
+### Soft Delete (Recommended)
+
+Instead of permanently deleting, mark documents as deleted for recovery options.
+
+<Tabs>
+<Tab title="JavaScript">
+```javascript
+// Mark as deleted instead of removing
+await db.updateDocument('users', 'user-123', {
+  deleted: true,
+  deletedAt: new Date().toISOString()
+});
+
+// Query non-deleted items
+const activeUsers = await db.listDocuments('users', {
+  filters: { deleted: false }
+});
+```
+</Tab>
+
+<Tab title="Dart">
+```dart
+// Mark as deleted
+await db.updateDocument('users', 'user-123', {
+  'deleted': true,
+  'deletedAt': DateTime.now().toIso8601String(),
+});
+
+// Query non-deleted items
+final activeUsers = await db.listDocuments('users', filters: {
+  'deleted': false,
+});
+```
+</Tab>
+
+<Tab title="Go">
+```go
+// Mark as deleted
+updates := map[string]interface{}{
+    "deleted":   true,
+    "deletedAt": time.Now().Format(time.RFC3339),
+}
+
+_, err := client.UpdateDocument(ctx, "users", "user-123", updates)
+
+// Query non-deleted items
+query := cocobase.NewQuery().Where("deleted", false)
+activeUsers, err := client.ListDocuments(ctx, "users", query)
+```
+</Tab>
+
+<Tab title="Python">
+```python
+from datetime import datetime
+
+# Mark as deleted
+updates = {
+    'deleted': True,
+    'deletedAt': datetime.utcnow().isoformat()
+}
+
+response = requests.patch(
+    f'{BASE_URL}/collections/users/documents/user-123',
+    headers=headers,
+    json=updates
+)
+
+# Query non-deleted items
+params = {'deleted': 'false'}
+response = requests.get(
+    f'{BASE_URL}/collections/users/documents',
+    headers=headers,
+    params=params
+)
+```
+</Tab>
+
+<Tab title="HTTP">
+```bash
+# Mark as deleted
+curl -X PATCH https://api.cocobase.buzz/collections/users/documents/user-123 \
+  -H "X-API-Key: your-api-key" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "deleted": true,
+    "deletedAt": "2024-01-15T10:30:00Z"
+  }'
+
+# Query non-deleted items
+curl "https://api.cocobase.buzz/collections/users/documents?deleted=false" \
+  -H "X-API-Key: your-api-key"
+```
+</Tab>
+</Tabs>
+
+---
+
+## Error Handling
+
+Handle errors gracefully across all operations.
+
+<Tabs>
+<Tab title="JavaScript">
+```typescript
+try {
+  const user = await db.getDocument('users', userId);
+  console.log(user);
+} catch (error) {
+  console.error('Failed to fetch user:', error.message);
+  // Handle error appropriately
+}
+```
+</Tab>
+
+<Tab title="Dart">
+```dart
+try {
+  final user = await db.getDocument('users', userId);
+  print(user);
+} on DioException catch (e) {
+  if (e.response?.statusCode == 404) {
+    print('Document not found');
+  } else {
+    print('Network error: ${e.message}');
+  }
+} catch (e) {
+  print('Unexpected error: $e');
+}
+```
+</Tab>
+
+<Tab title="Go">
+```go
+doc, err := client.GetDocument(ctx, "users", userID)
+if err != nil {
+    if apiErr, ok := err.(*cocobase.APIError); ok {
+        switch apiErr.StatusCode {
+        case 404:
+            fmt.Println("Document not found")
+        case 401:
+            fmt.Println("Not authenticated")
+        case 403:
+            fmt.Println("Permission denied")
+        default:
+            fmt.Printf("Error: %s\n", apiErr.Suggestion)
+        }
+    } else {
+        log.Fatal(err)
+    }
+}
+```
+</Tab>
+
+<Tab title="Python">
+```python
+try:
+    response = requests.get(
+        f'{BASE_URL}/collections/users/documents/{user_id}',
+        headers=headers
+    )
+    response.raise_for_status()
+    user = response.json()
+    print(user)
+except requests.exceptions.HTTPError as e:
+    if e.response.status_code == 404:
+        print("Document not found")
+    else:
+        print(f"HTTP error: {e}")
+except Exception as e:
+    print(f"Error: {e}")
+```
+</Tab>
+
+<Tab title="HTTP">
+```bash
+# Check HTTP status codes
+# 200 OK - Success
+# 404 Not Found - Document doesn't exist
+# 401 Unauthorized - Invalid API key
+# 403 Forbidden - Permission denied
+# 500 Internal Server Error - Server error
+```
+</Tab>
+</Tabs>
+
+---
+
+## Best Practices
+
+<AccordionGroup>
+<Accordion title="1. Use Type Safety">
+Define your data structures for better development experience and fewer bugs.
+
+```typescript
+// ✓ Good: Type-safe
+interface User {
+  name: string;
+  email: string;
+}
+
+const user = await db.createDocument<User>('users', {
+  name: 'John',
+  email: 'john@example.com'
+});
+```
+</Accordion>
+
+<Accordion title="2. Handle Errors">
+Always wrap operations in try-catch blocks or check for errors.
+
+```typescript
+// ✓ Good: Error handling
+try {
+  const user = await db.getDocument('users', userId);
+  console.log(user);
+} catch (error) {
+  console.error('Failed to fetch user:', error.message);
+}
+```
+</Accordion>
+
+<Accordion title="3. Use Batch Operations">
+Batch operations are more efficient than multiple individual requests.
+
+```typescript
+// ✓ Good: Single batch operation
+await db.createDocuments('users', [user1, user2, user3]);
+
+// ✗ Bad: Multiple individual operations
+await db.createDocument('users', user1);
+await db.createDocument('users', user2);
+await db.createDocument('users', user3);
+```
+</Accordion>
+
+<Accordion title="4. Prefer Soft Deletes">
+Use soft deletes for important data to enable recovery.
+
+```typescript
+// ✓ Good: Soft delete
+await db.updateDocument('users', userId, {
+  deleted: true,
+  deletedAt: new Date().toISOString()
+});
+```
+</Accordion>
+
+<Accordion title="5. Add Timestamps">
+Track when records are created and modified.
+
+```typescript
+// ✓ Good: Include timestamps
+const post = await db.createDocument('posts', {
+  title: 'My Post',
+  content: '...',
+  createdAt: new Date().toISOString(),
+  updatedAt: new Date().toISOString()
+});
+```
+</Accordion>
+</AccordionGroup>
+
+---
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Query & Filtering" icon="filter" href="/features/querying">
+    Learn advanced filtering and query techniques
+  </Card>
+  <Card title="Relationships" icon="link" href="/features/relationships">
+    Work with related documents and references
+  </Card>
+  <Card title="Real-time Updates" icon="bolt" href="/features/realtime">
+    Subscribe to live data changes
+  </Card>
+  <Card title="File Storage" icon="file" href="/features/file-storage">
+    Upload and manage files in documents
+  </Card>
+</CardGroup>

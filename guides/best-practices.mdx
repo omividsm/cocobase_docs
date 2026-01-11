@@ -1,0 +1,964 @@
+---
+title: Best Practices
+description: Security, performance, and code quality guidelines for CocoBase
+---
+
+# Best Practices
+
+Master the art of building secure, performant, and maintainable applications with CocoBase.
+
+## Security Best Practices
+
+### API Key Management
+
+**Never Hard-Code API Keys:**
+
+<Tabs>
+<Tab title="Flutter">
+```dart
+// Bad - hardcoded credentials
+final config = CocobaseConfig(
+  apiKey: "hardcoded-key",  // DON'T DO THIS
+);
+
+// Good - use environment variables
+const apiKey = String.fromEnvironment('COCOBASE_API_KEY');
+final config = CocobaseConfig(apiKey: apiKey);
+
+// Good - load from secure storage
+final prefs = await SharedPreferences.getInstance();
+final apiKey = prefs.getString('cocobase_api_key');
+final config = CocobaseConfig(apiKey: apiKey!);
+```
+</Tab>
+
+<Tab title="JavaScript">
+```javascript
+// Bad - hardcoded credentials
+const config = {
+  apiKey: "hardcoded-key",  // DON'T DO THIS
+};
+
+// Good - use environment variables
+const config = {
+  apiKey: process.env.COCOBASE_API_KEY,
+};
+
+// Good - use .env file
+import dotenv from 'dotenv';
+dotenv.config();
+
+const config = {
+  apiKey: process.env.COCOBASE_API_KEY,
+};
+```
+</Tab>
+
+<Tab title="Python">
+```python
+# Bad - hardcoded credentials
+config = CocobaseConfig(
+    api_key="hardcoded-key"  # DON'T DO THIS
+)
+
+# Good - use environment variables
+import os
+
+config = CocobaseConfig(
+    api_key=os.getenv('COCOBASE_API_KEY')
+)
+```
+</Tab>
+
+<Tab title="Go">
+```go
+// Bad - hardcoded credentials
+config := cocobase.Config{
+    APIKey: "hardcoded-key",  // DON'T DO THIS
+}
+
+// Good - use environment variables
+config := cocobase.Config{
+    APIKey: os.Getenv("COCOBASE_API_KEY"),
+}
+```
+</Tab>
+</Tabs>
+
+**Rotate API Keys Regularly:**
+
+- Generate new API keys every 90 days
+- Revoke old keys after migration
+- Use different keys for development, staging, and production
+- Never commit API keys to version control
+
+**Add to .gitignore:**
+
+```bash
+# .gitignore
+.env
+.env.local
+config/secrets.json
+**/secrets/
+```
+
+### Authentication Security
+
+**Always Verify User Authentication:**
+
+<Tabs>
+<Tab title="Python Cloud Functions">
+```python
+def main():
+    # Check if user is authenticated
+    user = req.user
+
+    if not user:
+        return {"error": "Authentication required"}, 401
+
+    # Proceed with authenticated operations
+    return {"user_id": user.id}
+```
+</Tab>
+
+<Tab title="Flutter">
+```dart
+Future<void> performSecureOperation() async {
+  // Check authentication first
+  final isAuth = await db.isAuthenticated();
+  if (!isAuth) {
+    throw Exception('Authentication required');
+  }
+
+  // Proceed with operation
+  await db.createDocument("posts", data);
+}
+```
+</Tab>
+
+<Tab title="JavaScript">
+```javascript
+async function performSecureOperation() {
+  // Check authentication first
+  const isAuth = await db.isAuthenticated();
+  if (!isAuth) {
+    throw new Error('Authentication required');
+  }
+
+  // Proceed with operation
+  await db.createDocument('posts', data);
+}
+```
+</Tab>
+</Tabs>
+
+**Implement Role-Based Access Control:**
+
+```python
+def main():
+    user = req.user
+
+    if not user:
+        return {"error": "Authentication required"}, 401
+
+    # Check user roles
+    if 'admin' not in user.roles:
+        return {"error": "Forbidden - admin access required"}, 403
+
+    # Perform admin operation
+    result = perform_admin_action()
+    return {"result": result}
+```
+
+**Validate Token Expiration:**
+
+```dart
+Future<void> withAuthCheck(Future<void> Function() operation) async {
+  try {
+    await operation();
+  } on DioException catch (e) {
+    if (e.response?.statusCode == 401) {
+      // Token expired - logout and redirect to login
+      await db.logout();
+      // Navigate to login screen
+      throw Exception('Session expired - please login again');
+    }
+    rethrow;
+  }
+}
+```
+
+### Input Validation
+
+**Always Validate User Input:**
+
+<Tabs>
+<Tab title="Python">
+```python
+def main():
+    email = req.get('email', '').strip()
+    password = req.get('password', '')
+
+    # Validate email
+    if not email or '@' not in email:
+        return {"error": "Invalid email format"}, 400
+
+    # Validate password strength
+    if len(password) < 8:
+        return {"error": "Password must be at least 8 characters"}, 400
+
+    # Proceed with registration
+    user = db.create_app_user(email, password)
+    return {"user": user}
+```
+</Tab>
+
+<Tab title="Flutter">
+```dart
+Future<void> createPost(String title, String content) async {
+  // Validate title
+  if (title.trim().isEmpty) {
+    throw ArgumentError('Title is required');
+  }
+
+  if (title.length > 200) {
+    throw ArgumentError('Title too long (max 200 characters)');
+  }
+
+  // Validate content
+  if (content.trim().isEmpty) {
+    throw ArgumentError('Content is required');
+  }
+
+  if (content.length > 10000) {
+    throw ArgumentError('Content too long (max 10000 characters)');
+  }
+
+  // Create post
+  await db.createDocument('posts', {
+    'title': title.trim(),
+    'content': content.trim(),
+  });
+}
+```
+</Tab>
+</Tabs>
+
+**Sanitize User Input:**
+
+```javascript
+function sanitizeInput(input) {
+  // Remove HTML tags
+  return input.replace(/<[^>]*>/g, '');
+}
+
+function createPost(title, content) {
+  const sanitizedTitle = sanitizeInput(title.trim());
+  const sanitizedContent = sanitizeInput(content.trim());
+
+  return db.createDocument('posts', {
+    title: sanitizedTitle,
+    content: sanitizedContent,
+  });
+}
+```
+
+### Secure Data Storage
+
+**Encrypt Sensitive Data:**
+
+```python
+import hashlib
+
+def main():
+    password = req.get('password')
+
+    # Hash password before storing
+    hashed = hashlib.sha256(password.encode()).hexdigest()
+
+    # Or use more secure methods like bcrypt
+    # hashed = bcrypt.hashpw(password.encode(), bcrypt.gensalt())
+
+    user = db.create_app_user(
+        email=req.get('email'),
+        password=hashed,
+        data={'hashed': True}
+    )
+
+    return {"user_id": user.id}
+```
+
+**Use HTTPS in Production:**
+
+```dart
+// Good - HTTPS for production
+final config = CocobaseConfig(
+  apiKey: apiKey,
+  baseUrl: 'https://api.cocobase.buzz',  // HTTPS
+);
+
+// Bad - HTTP in production
+// baseUrl: 'http://api.cocobase.buzz',  // Insecure
+```
+
+---
+
+## Data Modeling Best Practices
+
+### Schema Design
+
+**Use Clear, Descriptive Field Names:**
+
+```dart
+// Good - clear intent
+{
+  "author_id": "user-123",        // Obviously a user reference
+  "product_ids": ["p1", "p2"],    // Obviously multiple products
+  "created_at": "2024-01-15",     // Clear timestamp
+  "is_published": true,           // Boolean clarity
+}
+
+// Bad - ambiguous names
+{
+  "related": "...",      // Related to what?
+  "ids": ["..."],        // IDs of what?
+  "date": "...",         // Created, updated, deleted?
+  "flag": true,          // Flag for what?
+}
+```
+
+**Normalize Data Appropriately:**
+
+```javascript
+// Good - normalized structure
+const user = {
+  id: 'user-123',
+  name: 'John Doe',
+  company_id: 'company-456'  // Reference to company
+};
+
+const company = {
+  id: 'company-456',
+  name: 'TechCorp',
+  address: '123 Main St'
+};
+
+// Bad - denormalized (duplicated data)
+const user = {
+  id: 'user-123',
+  name: 'John Doe',
+  company_name: 'TechCorp',      // Duplicated
+  company_address: '123 Main St'  // Duplicated
+};
+```
+
+**Use Appropriate Data Types:**
+
+```python
+# Good - appropriate types
+document = {
+    "price": 29.99,           # Number, not string
+    "quantity": 5,            # Integer
+    "is_available": True,     # Boolean, not string
+    "tags": ["tech", "new"],  # Array
+    "created_at": "2024-01-15T10:30:00Z"  # ISO 8601 timestamp
+}
+
+# Bad - wrong types
+document = {
+    "price": "29.99",         # String instead of number
+    "quantity": "5",          # String instead of int
+    "is_available": "true",   # String instead of boolean
+    "tags": "tech,new",       # String instead of array
+    "created_at": "01/15/2024"  # Non-standard date format
+}
+```
+
+### Relationship Management
+
+**Follow Naming Conventions:**
+
+```dart
+// Single references use _id suffix
+{
+  "author_id": "user-123",
+  "category_id": "cat-456",
+  "company_id": "comp-789"
+}
+
+// Multiple references use _ids suffix
+{
+  "tag_ids": ["tag-1", "tag-2"],
+  "follower_ids": ["user-4", "user-5"],
+  "product_ids": ["prod-1", "prod-2", "prod-3"]
+}
+```
+
+**Cache Relationship Counts:**
+
+```python
+# Store counts for quick access
+user_data = {
+    "followers_count": 1500,  # Update when changed
+    "following_count": 300,
+    "posts_count": 42
+}
+
+# Instead of counting every time
+# followers = db.get_user_relationships(user_id, "followers")
+# count = followers["total"]  # Expensive!
+```
+
+---
+
+## Query Optimization
+
+### Use Indexes Strategically
+
+**Index Frequently Queried Fields:**
+
+```python
+# Good - index fields used in queries
+collection_schema = {
+    "name": "posts",
+    "indexes": [
+        {"field": "status"},      # Frequently filtered
+        {"field": "author_id"},   # Frequently filtered
+        {"field": "created_at"},  # Used for sorting
+    ]
+}
+```
+
+**Avoid Over-Indexing:**
+
+```javascript
+// Bad - too many indexes
+const schema = {
+  name: 'posts',
+  indexes: [
+    { field: 'status' },
+    { field: 'title' },
+    { field: 'content' },     // Large text - don't index
+    { field: 'views' },       // Changes frequently - expensive
+    { field: 'is_draft' },    // Low cardinality - not useful
+  ]
+};
+
+// Good - selective indexing
+const schema = {
+  name: 'posts',
+  indexes: [
+    { field: 'status' },
+    { field: 'author_id' },
+    { field: 'created_at' },
+  ]
+};
+```
+
+### Efficient Queries
+
+**Use Specific Queries:**
+
+```dart
+// Good - specific query
+final query = QueryBuilder()
+  .where('status', 'published')
+  .where('author_id', userId)
+  .limit(50);
+
+final docs = await db.listDocuments("posts", queryBuilder: query);
+
+// Bad - fetching everything then filtering
+final all = await db.listDocuments("posts");
+final filtered = all.where((doc) =>
+  doc.data['status'] == 'published' &&
+  doc.data['author_id'] == userId
+).toList();
+```
+
+**Always Set Limits:**
+
+```python
+# Good - limited results
+posts = db.query("posts",
+    status="published",
+    limit=20  # Prevent loading too much
+)
+
+# Bad - no limit (could return millions)
+posts = db.query("posts",
+    status="published"
+)
+```
+
+**Use Pagination:**
+
+```javascript
+// Good - paginate results
+async function getAllUsers() {
+  const users = [];
+  let page = 1;
+  const perPage = 100;
+  let hasMore = true;
+
+  while (hasMore) {
+    const result = await db.listDocuments('users', {
+      limit: perPage,
+      offset: (page - 1) * perPage
+    });
+
+    users.push(...result);
+    hasMore = result.length === perPage;
+    page++;
+  }
+
+  return users;
+}
+
+// Bad - fetch everything at once
+const users = await db.listDocuments('users');
+```
+
+**Select Only Needed Fields:**
+
+```dart
+// Good - select specific fields
+final docs = await db.listDocuments(
+  "books",
+  queryBuilder: QueryBuilder()
+    .select('id')
+    .select('title')
+    .select('price')
+    .limit(100),
+);
+
+// Bad - fetch all fields
+final docs = await db.listDocuments("books");
+```
+
+**Use Populate Wisely:**
+
+```python
+# Good - selective population
+posts = db.query("posts",
+    populate=["author"],  # Only what's needed
+    limit=20
+)
+
+# Bad - populate everything
+posts = db.query("posts",
+    populate=["author", "category", "tags", "comments", "likes"],  # Too much
+    limit=20
+)
+```
+
+---
+
+## Error Handling Patterns
+
+### Comprehensive Error Handling
+
+<Tabs>
+<Tab title="Flutter">
+```dart
+Future<void> performOperation() async {
+  try {
+    final result = await db.createDocument("posts", data);
+    print('Success: ${result.id}');
+  } on DioException catch (e) {
+    if (e.response?.statusCode == 400) {
+      print('Bad request - check your data');
+    } else if (e.response?.statusCode == 401) {
+      print('Unauthorized - login required');
+      await handleSessionExpired();
+    } else if (e.response?.statusCode == 403) {
+      print('Forbidden - insufficient permissions');
+    } else if (e.response?.statusCode == 404) {
+      print('Not found');
+    } else if (e.response?.statusCode == 429) {
+      print('Rate limited - slow down');
+      await Future.delayed(Duration(seconds: 5));
+    } else {
+      print('Error: ${e.message}');
+    }
+  } catch (e) {
+    print('Unexpected error: $e');
+  }
+}
+```
+</Tab>
+
+<Tab title="JavaScript">
+```javascript
+async function performOperation() {
+  try {
+    const result = await db.createDocument('posts', data);
+    console.log('Success:', result.id);
+  } catch (error) {
+    if (error.response) {
+      switch (error.response.status) {
+        case 400:
+          console.error('Bad request - check your data');
+          break;
+        case 401:
+          console.error('Unauthorized - login required');
+          await handleSessionExpired();
+          break;
+        case 403:
+          console.error('Forbidden - insufficient permissions');
+          break;
+        case 404:
+          console.error('Not found');
+          break;
+        case 429:
+          console.error('Rate limited - slow down');
+          await sleep(5000);
+          break;
+        default:
+          console.error('Error:', error.message);
+      }
+    } else {
+      console.error('Unexpected error:', error);
+    }
+  }
+}
+```
+</Tab>
+
+<Tab title="Python">
+```python
+def main():
+    try:
+        user_id = req.get("user_id")
+
+        if not user_id:
+            return {"error": "user_id is required"}, 400
+
+        posts = db.query("posts",
+            author_id=user_id,
+            limit=20
+        )
+
+        return {"posts": posts["data"]}
+
+    except ValueError as e:
+        return {"error": str(e)}, 400
+    except Exception as e:
+        print(f"Error: {str(e)}")
+        return {"error": "Internal server error"}, 500
+```
+</Tab>
+
+<Tab title="Go">
+```go
+func performOperation() error {
+    doc, err := client.CreateDocument(ctx, "posts", data)
+    if err != nil {
+        if apiErr, ok := err.(*cocobase.APIError); ok {
+            switch apiErr.StatusCode {
+            case 400:
+                return fmt.Errorf("bad request: %w", err)
+            case 401:
+                return fmt.Errorf("unauthorized: %w", err)
+            case 403:
+                return fmt.Errorf("forbidden: %w", err)
+            case 404:
+                return fmt.Errorf("not found: %w", err)
+            case 429:
+                time.Sleep(5 * time.Second)
+                return fmt.Errorf("rate limited: %w", err)
+            default:
+                return fmt.Errorf("error: %w", err)
+            }
+        }
+        return err
+    }
+
+    fmt.Printf("Success: %s\n", doc.ID)
+    return nil
+}
+```
+</Tab>
+</Tabs>
+
+### Retry Logic
+
+**Implement Exponential Backoff:**
+
+```dart
+Future<T> withRetry<T>(
+  Future<T> Function() operation, {
+  int maxAttempts = 3,
+}) async {
+  for (int i = 0; i < maxAttempts; i++) {
+    try {
+      return await operation();
+    } catch (e) {
+      if (i == maxAttempts - 1) rethrow;
+
+      // Exponential backoff: 2^i seconds
+      await Future.delayed(Duration(seconds: 1 << i));
+    }
+  }
+  throw Exception('Max retries exceeded');
+}
+
+// Use it
+final books = await withRetry(() => db.listDocuments<Book>("books"));
+```
+
+---
+
+## Rate Limiting
+
+### Respect API Limits
+
+**Implement Client-Side Rate Limiting:**
+
+```javascript
+class RateLimiter {
+  constructor(maxRequests = 100, windowMs = 60000) {
+    this.requests = [];
+    this.maxRequests = maxRequests;
+    this.windowMs = windowMs;
+  }
+
+  async acquire() {
+    const now = Date.now();
+
+    // Remove old requests outside the window
+    this.requests = this.requests.filter(
+      time => now - time < this.windowMs
+    );
+
+    // Check if we're at the limit
+    if (this.requests.length >= this.maxRequests) {
+      const oldestRequest = this.requests[0];
+      const waitTime = this.windowMs - (now - oldestRequest);
+      await sleep(waitTime);
+      return this.acquire(); // Retry
+    }
+
+    this.requests.push(now);
+  }
+}
+
+// Use it
+const limiter = new RateLimiter(100, 60000); // 100 requests per minute
+
+async function makeRequest() {
+  await limiter.acquire();
+  return db.listDocuments('posts');
+}
+```
+
+**Batch Requests When Possible:**
+
+```python
+# Good - batch operations
+def import_books(books_data):
+    batch_size = 100
+    for i in range(0, len(books_data), batch_size):
+        batch = books_data[i:i + batch_size]
+        db.bulk_create_documents("books", batch)
+
+# Bad - individual requests
+def import_books(books_data):
+    for book in books_data:
+        db.create_document("books", book)  # Too many requests!
+```
+
+---
+
+## Production Checklist
+
+Before deploying to production, verify:
+
+### Security
+
+- [ ] API keys are stored securely (environment variables, not hardcoded)
+- [ ] HTTPS is enabled for all API calls
+- [ ] User authentication is properly validated
+- [ ] Input validation is implemented
+- [ ] Sensitive data is encrypted
+- [ ] Rate limiting is configured
+- [ ] Error messages don't leak sensitive information
+
+### Performance
+
+- [ ] Indexes are created on frequently queried fields
+- [ ] Pagination is implemented for large datasets
+- [ ] Query limits are set appropriately
+- [ ] Caching is implemented where appropriate
+- [ ] Only necessary fields are selected/populated
+- [ ] Batch operations are used for bulk actions
+
+### Code Quality
+
+- [ ] Error handling is comprehensive
+- [ ] Logging is implemented
+- [ ] Code follows naming conventions
+- [ ] Tests are written and passing
+- [ ] Documentation is up to date
+- [ ] Type safety is enforced (where applicable)
+
+### Data Management
+
+- [ ] Database schema is properly designed
+- [ ] Relationships are clearly defined
+- [ ] Backup strategy is in place
+- [ ] Data migration plan exists
+- [ ] Soft deletes are used where appropriate
+
+### Monitoring
+
+- [ ] Error tracking is set up (e.g., Sentry)
+- [ ] Performance monitoring is enabled
+- [ ] Logs are centralized and searchable
+- [ ] Alerts are configured for critical issues
+
+---
+
+## Performance Tips
+
+### 1. Use Connection Pooling
+
+```go
+// Good - custom HTTP client with connection pooling
+httpClient := &http.Client{
+    Timeout: 30 * time.Second,
+    Transport: &http.Transport{
+        MaxIdleConns:        100,
+        MaxIdleConnsPerHost: 10,
+        IdleConnTimeout:     90 * time.Second,
+    },
+}
+
+client := cocobase.NewClient(cocobase.Config{
+    APIKey:     apiKey,
+    HTTPClient: httpClient,
+})
+```
+
+### 2. Minimize Network Requests
+
+```dart
+// Bad - N+1 query problem
+final posts = await db.listDocuments("posts", limit: 10);
+for (var post in posts) {
+  final author = await db.getDocument("users", post.data['author_id']);
+  print('Author: ${author.data['name']}');
+}
+
+// Good - use populate
+final posts = await db.listDocuments(
+  "posts",
+  queryBuilder: QueryBuilder().populate('author'),
+  limit: 10
+);
+for (var post in posts) {
+  print('Author: ${post.data['author']['name']}');
+}
+```
+
+### 3. Use Bulk Operations
+
+```javascript
+// Bad - individual creates
+for (const book of books) {
+  await db.createDocument('books', book);
+}
+
+// Good - batch create
+await db.batchCreateDocuments('books', books);
+```
+
+### 4. Implement Lazy Loading
+
+Load data only when needed to improve initial load time.
+
+### 5. Optimize Images and Files
+
+- Compress images before upload
+- Use appropriate formats (WebP for web)
+- Implement lazy loading for images
+- Use CDN for static assets
+
+---
+
+## Testing Best Practices
+
+### Unit Testing
+
+```dart
+// Flutter example
+void main() {
+  group('Book operations', () {
+    late Cocobase db;
+
+    setUp(() {
+      final config = CocobaseConfig(apiKey: 'test-key');
+      db = Cocobase(config);
+    });
+
+    test('should create a book', () async {
+      final book = await db.createDocument('books', {
+        'title': 'Test Book',
+        'author': 'Test Author',
+        'price': 19.99,
+      });
+
+      expect(book.data['title'], 'Test Book');
+      expect(book.data['price'], 19.99);
+    });
+
+    test('should handle validation errors', () async {
+      expect(
+        () => db.createDocument('books', {}),
+        throwsA(isA<ValidationError>()),
+      );
+    });
+  });
+}
+```
+
+### Integration Testing
+
+```javascript
+// JavaScript example
+describe('User authentication', () => {
+  let db;
+
+  beforeEach(() => {
+    db = new Cocobase({ apiKey: process.env.TEST_API_KEY });
+  });
+
+  it('should register a new user', async () => {
+    const user = await db.register({
+      email: 'test@example.com',
+      password: 'SecurePassword123!',
+    });
+
+    expect(user.email).toBe('test@example.com');
+    expect(user.id).toBeDefined();
+  });
+
+  it('should login with correct credentials', async () => {
+    const result = await db.login({
+      email: 'test@example.com',
+      password: 'SecurePassword123!',
+    });
+
+    expect(result.token).toBeDefined();
+  });
+});
+```
+
+---
+
+## Next Steps
+
+- **[Troubleshooting](/guides/troubleshooting)** - Common issues and solutions
+- **[Cloud Functions](/features/cloud-functions)** - Build serverless functions
+- **[Advanced Features](/features/advanced)** - Batch operations and aggregations
+- **[Examples](/examples)** - Real-world code examples

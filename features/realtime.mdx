@@ -1,0 +1,1661 @@
+---
+title: "Real-time Updates"
+description: "Build reactive applications with WebSocket-based real-time data synchronization"
+---
+
+# Real-time Updates
+
+Build reactive, collaborative applications with instant data synchronization using WebSocket connections across all platforms.
+
+<Note>
+  Real-time updates enable live collaboration, instant notifications, and
+  reactive UI updates without polling.
+</Note>
+
+## Overview
+
+Cocobase Real-time features:
+
+- **WebSocket connections** - Persistent, bidirectional communication
+- **Collection watching** - Subscribe to document changes
+- **Event types** - Create, update, delete notifications
+- **Filtered subscriptions** - Only receive relevant events
+- **Broadcast messaging** - Real-time communication channels
+- **Automatic reconnection** - Built-in connection management
+
+---
+
+## WebSocket Connection
+
+Establish a persistent connection to receive real-time updates.
+
+### Basic Connection
+
+<Tabs>
+<Tab title="JavaScript">
+```javascript
+import { Cocobase } from 'cocobase';
+
+const db = new Cocobase({ apiKey: 'your-api-key' });
+
+// Watch a collection
+const connection = db.watchCollection('users', (event) => {
+  console.log('Event:', event.type);
+  console.log('Data:', event.data);
+});
+
+// Close when done
+connection.close();
+```
+</Tab>
+
+<Tab title="Dart">
+```dart
+import 'package:cocobase/cocobase.dart';
+
+final db = Cocobase(CocobaseConfig(apiKey: 'your-api-key'));
+
+// Watch a collection
+final conn = db.watchCollection(
+  'users',
+  (event) {
+    print('Event: ${event['event']}');
+    print('Data: ${event['data']}');
+  },
+);
+
+// Close when done
+db.closeConnection(conn);
+```
+</Tab>
+
+<Tab title="Go">
+```go
+package main
+
+import (
+    "context"
+    "fmt"
+    "log"
+    "github.com/lordace-coder/cocobase-go/cocobase"
+)
+
+func main() {
+    client := cocobase.NewClient(cocobase.Config{
+        APIKey: "your-api-key",
+    })
+
+    ctx := context.Background()
+
+    // Watch a collection
+    conn, err := client.WatchCollection(
+        ctx,
+        "users",
+        func(event cocobase.Event) {
+            fmt.Printf("Event: %s\n", event.Event)
+            fmt.Printf("Data: %+v\n", event.Data)
+        },
+        "users-watcher",
+    )
+
+    if err != nil {
+        log.Fatal(err)
+    }
+    defer conn.Close()
+
+    // Keep application running
+    select {}
+}
+```
+</Tab>
+
+<Tab title="Python">
+```python
+import websocket
+import json
+import threading
+
+API_KEY = 'your-api-key'
+
+def on_message(ws, message):
+    event = json.loads(message)
+    print(f"Event: {event['event']}")
+    print(f"Data: {event['data']}")
+
+def on_open(ws):
+    # Send subscription message
+    ws.send(json.dumps({
+        'api_key': API_KEY,
+        'collection': 'users'
+    }))
+
+ws = websocket.WebSocketApp(
+    'wss://api.cocobase.buzz/realtime/collections/users',
+    on_message=on_message,
+    on_open=on_open
+)
+
+# Run in thread
+wst = threading.Thread(target=ws.run_forever)
+wst.daemon = True
+wst.start()
+```
+</Tab>
+
+<Tab title="HTTP">
+```bash
+# WebSocket connection (use wscat or similar tool)
+wscat -c "wss://api.cocobase.buzz/realtime/collections/users"
+
+# After connection, send:
+{"api_key": "your-api-key"}
+
+# You'll receive events like:
+# {"event": "create", "data": {...}}
+# {"event": "update", "data": {...}}
+# {"event": "delete", "data": {...}}
+```
+</Tab>
+</Tabs>
+
+### With Connection Callbacks
+
+<Tabs>
+<Tab title="JavaScript">
+```javascript
+const connection = db.watchCollection('users',
+  (event) => {
+    console.log('Event:', event);
+  },
+  {
+    onConnected: () => console.log('✓ Connected'),
+    onDisconnected: () => console.log('✗ Disconnected'),
+    onError: (error) => console.error('Error:', error)
+  }
+);
+```
+</Tab>
+
+<Tab title="Dart">
+```dart
+final conn = db.watchCollection(
+  'users',
+  (event) {
+    print('Event: ${event['event']}');
+  },
+  connectionName: 'users-watcher',
+  onConnected: () => print('✓ Connected'),
+  onConnectionError: () => print('✗ Connection error'),
+);
+```
+</Tab>
+
+<Tab title="Go">
+```go
+conn, err := client.WatchCollection(
+    ctx,
+    "users",
+    func(event cocobase.Event) {
+        fmt.Printf("Event: %s\n", event.Event)
+    },
+    "users-watcher",
+)
+
+if err != nil {
+    log.Printf("Connection error: %v\n", err)
+}
+
+fmt.Println("✓ Connected")
+```
+</Tab>
+
+<Tab title="Python">
+```python
+def on_error(ws, error):
+    print(f"✗ Error: {error}")
+
+def on_close(ws, close_status_code, close_msg):
+    print("✗ Disconnected")
+
+def on_open(ws):
+    print("✓ Connected")
+    ws.send(json.dumps({
+        'api_key': API_KEY,
+        'collection': 'users'
+    }))
+
+ws = websocket.WebSocketApp(
+    'wss://api.cocobase.buzz/realtime/collections/users',
+    on_message=on_message,
+    on_error=on_error,
+    on_close=on_close,
+    on_open=on_open
+)
+
+ws.run_forever()
+```
+</Tab>
+
+<Tab title="HTTP">
+```javascript
+// Browser WebSocket
+const ws = new WebSocket('wss://api.cocobase.buzz/realtime/collections/users');
+
+ws.onopen = () => {
+  console.log('✓ Connected');
+  ws.send(JSON.stringify({ api_key: 'your-api-key' }));
+};
+
+ws.onmessage = (event) => {
+  const data = JSON.parse(event.data);
+  console.log('Event:', data);
+};
+
+ws.onerror = (error) => {
+  console.error('✗ Error:', error);
+};
+
+ws.onclose = () => {
+  console.log('✗ Disconnected');
+};
+```
+</Tab>
+</Tabs>
+
+---
+
+## Event Types
+
+Handle different types of real-time events.
+
+### Create Events
+
+Triggered when a new document is created.
+
+<Tabs>
+<Tab title="JavaScript">
+```javascript
+db.watchCollection('posts', (event) => {
+  if (event.type === 'create') {
+    console.log('New post created:', event.data.id);
+    console.log('Title:', event.data.title);
+
+    // Update UI
+    addPostToUI(event.data);
+  }
+});
+```
+</Tab>
+
+<Tab title="Dart">
+```dart
+db.watchCollection('posts', (event) {
+  switch (event.type) {
+    case 'create':
+      print('New post created: ${event.data.id}');
+      print('Title: ${event.data.data['title']}');
+
+      // Update UI
+      addPostToUI(event.data);
+      break;
+  }
+});
+```
+</Tab>
+
+<Tab title="Go">
+```go
+conn, _ := client.WatchCollection(ctx, "posts",
+    func(event cocobase.Event) {
+        if event.Event == "create" {
+            fmt.Printf("New post created: %s\n", event.Data.ID)
+            fmt.Printf("Title: %v\n", event.Data.Data["title"])
+
+            // Update UI
+            addPostToUI(event.Data)
+        }
+    },
+    "posts-watcher",
+)
+```
+</Tab>
+
+<Tab title="Python">
+```python
+def on_message(ws, message):
+    event = json.loads(message)
+
+    if event['event'] == 'create':
+        print(f"New post created: {event['data']['id']}")
+        print(f"Title: {event['data'].get('title')}")
+
+        # Update UI
+        add_post_to_ui(event['data'])
+
+ws = websocket.WebSocketApp(
+    'wss://api.cocobase.buzz/realtime/collections/posts',
+    on_message=on_message
+)
+```
+</Tab>
+
+<Tab title="HTTP">
+```javascript
+ws.onmessage = (event) => {
+  const data = JSON.parse(event.data);
+
+  if (data.event === 'create') {
+    console.log('New post created:', data.data.id);
+    console.log('Title:', data.data.title);
+
+    // Update UI
+    addPostToUI(data.data);
+  }
+};
+```
+</Tab>
+</Tabs>
+
+### Update Events
+
+Triggered when a document is modified.
+
+<Tabs>
+<Tab title="JavaScript">
+```javascript
+db.watchCollection('posts', (event) => {
+  if (event.type === 'update') {
+    console.log('Post updated:', event.data.id);
+    console.log('New title:', event.data.title);
+
+    // Update existing UI element
+    updatePostInUI(event.data);
+  }
+});
+```
+</Tab>
+
+<Tab title="Dart">
+```dart
+db.watchCollection('posts', (event) {
+  if (event.type == 'update') {
+    print('Post updated: ${event.data.id}');
+    print('New title: ${event.data.data['title']}');
+
+    // Update existing UI element
+    updatePostInUI(event.data);
+  }
+});
+```
+</Tab>
+
+<Tab title="Go">
+```go
+conn, _ := client.WatchCollection(ctx, "posts",
+    func(event cocobase.Event) {
+        if event.Event == "update" {
+            fmt.Printf("Post updated: %s\n", event.Data.ID)
+            fmt.Printf("New title: %v\n", event.Data.Data["title"])
+
+            // Update existing UI element
+            updatePostInUI(event.Data)
+        }
+    },
+    "posts-watcher",
+)
+```
+</Tab>
+
+<Tab title="Python">
+```python
+def on_message(ws, message):
+    event = json.loads(message)
+
+    if event['event'] == 'update':
+        print(f"Post updated: {event['data']['id']}")
+        print(f"New title: {event['data'].get('title')}")
+
+        # Update existing UI element
+        update_post_in_ui(event['data'])
+```
+</Tab>
+
+<Tab title="HTTP">
+```javascript
+ws.onmessage = (event) => {
+  const data = JSON.parse(event.data);
+
+  if (data.event === 'update') {
+    console.log('Post updated:', data.data.id);
+    console.log('New title:', data.data.title);
+
+    // Update existing UI element
+    updatePostInUI(data.data);
+  }
+};
+```
+</Tab>
+</Tabs>
+
+### Delete Events
+
+Triggered when a document is deleted.
+
+<Tabs>
+<Tab title="JavaScript">
+```javascript
+db.watchCollection('posts', (event) => {
+  if (event.type === 'delete') {
+    console.log('Post deleted:', event.data.id);
+
+    // Remove from UI
+    removePostFromUI(event.data.id);
+  }
+});
+```
+</Tab>
+
+<Tab title="Dart">
+```dart
+db.watchCollection('posts', (event) {
+  if (event.type == 'delete') {
+    print('Post deleted: ${event.data.id}');
+
+    // Remove from UI
+    removePostFromUI(event.data.id);
+  }
+});
+```
+</Tab>
+
+<Tab title="Go">
+```go
+conn, _ := client.WatchCollection(ctx, "posts",
+    func(event cocobase.Event) {
+        if event.Event == "delete" {
+            fmt.Printf("Post deleted: %s\n", event.Data.ID)
+
+            // Remove from UI
+            removePostFromUI(event.Data.ID)
+        }
+    },
+    "posts-watcher",
+)
+```
+</Tab>
+
+<Tab title="Python">
+```python
+def on_message(ws, message):
+    event = json.loads(message)
+
+    if event['event'] == 'delete':
+        print(f"Post deleted: {event['data']['id']}")
+
+        # Remove from UI
+        remove_post_from_ui(event['data']['id'])
+```
+</Tab>
+
+<Tab title="HTTP">
+```javascript
+ws.onmessage = (event) => {
+  const data = JSON.parse(event.data);
+
+  if (data.event === 'delete') {
+    console.log('Post deleted:', data.data.id);
+
+    // Remove from UI
+    removePostFromUI(data.data.id);
+  }
+};
+```
+</Tab>
+</Tabs>
+
+### All Events Handler
+
+<Tabs>
+<Tab title="JavaScript">
+```javascript
+db.watchCollection('posts', (event) => {
+  switch (event.type) {
+    case 'connected':
+      console.log('✓ Connected to real-time updates');
+      break;
+
+    case 'create':
+      console.log('📝 New post:', event.data.id);
+      addPostToUI(event.data);
+      break;
+
+    case 'update':
+      console.log('✏️ Updated post:', event.data.id);
+      updatePostInUI(event.data);
+      break;
+
+    case 'delete':
+      console.log('🗑️ Deleted post:', event.data.id);
+      removePostFromUI(event.data.id);
+      break;
+
+    default:
+      console.log('Unknown event:', event.type);
+  }
+});
+```
+</Tab>
+
+<Tab title="Dart">
+```dart
+db.watchCollection('posts', (event) {
+  switch (event.type) {
+    case 'connected':
+      print('✓ Connected to real-time updates');
+      break;
+
+    case 'create':
+      print('📝 New post: ${event.data.id}');
+      addPostToUI(event.data);
+      break;
+
+    case 'update':
+      print('✏️ Updated post: ${event.data.id}');
+      updatePostInUI(event.data);
+      break;
+
+    case 'delete':
+      print('🗑️ Deleted post: ${event.data.id}');
+      removePostFromUI(event.data.id);
+      break;
+
+    default:
+      print('Unknown event: ${event.type}');
+  }
+});
+```
+</Tab>
+
+<Tab title="Go">
+```go
+conn, _ := client.WatchCollection(ctx, "posts",
+    func(event cocobase.Event) {
+        switch event.Event {
+        case "create":
+            fmt.Printf("📝 New post: %s\n", event.Data.ID)
+            addPostToUI(event.Data)
+
+        case "update":
+            fmt.Printf("✏️ Updated post: %s\n", event.Data.ID)
+            updatePostInUI(event.Data)
+
+        case "delete":
+            fmt.Printf("🗑️ Deleted post: %s\n", event.Data.ID)
+            removePostFromUI(event.Data.ID)
+
+        default:
+            fmt.Printf("Unknown event: %s\n", event.Event)
+        }
+    },
+    "posts-watcher",
+)
+```
+</Tab>
+
+<Tab title="Python">
+```python
+def on_message(ws, message):
+    event = json.loads(message)
+
+    event_type = event.get('event')
+
+    if event_type == 'create':
+        print(f"📝 New post: {event['data']['id']}")
+        add_post_to_ui(event['data'])
+
+    elif event_type == 'update':
+        print(f"✏️ Updated post: {event['data']['id']}")
+        update_post_in_ui(event['data'])
+
+    elif event_type == 'delete':
+        print(f"🗑️ Deleted post: {event['data']['id']}")
+        remove_post_from_ui(event['data']['id'])
+
+    else:
+        print(f"Unknown event: {event_type}")
+```
+</Tab>
+
+<Tab title="HTTP">
+```javascript
+ws.onmessage = (event) => {
+  const data = JSON.parse(event.data);
+
+  switch (data.event) {
+    case 'create':
+      console.log('📝 New post:', data.data.id);
+      addPostToUI(data.data);
+      break;
+
+    case 'update':
+      console.log('✏️ Updated post:', data.data.id);
+      updatePostInUI(data.data);
+      break;
+
+    case 'delete':
+      console.log('🗑️ Deleted post:', data.data.id);
+      removePostFromUI(data.data.id);
+      break;
+
+    default:
+      console.log('Unknown event:', data.event);
+  }
+};
+```
+</Tab>
+</Tabs>
+
+---
+
+## Filtering Real-time Events
+
+Only receive events for documents matching specific criteria.
+
+<Tabs>
+<Tab title="JavaScript">
+```javascript
+// Watch only active posts
+db.watchCollection('posts',
+  (event) => {
+    console.log('Active post event:', event);
+  },
+  {
+    filters: { status: 'active' }
+  }
+);
+
+// Watch posts by specific author
+db.watchCollection('posts',
+  (event) => {
+    console.log('Author post event:', event);
+  },
+  {
+    filters: { author_id: 'user-123' }
+  }
+);
+```
+</Tab>
+
+<Tab title="Dart">
+```dart
+// Watch only active posts
+db.watchCollection(
+  'posts',
+  (event) {
+    print('Active post event: ${event['event']}');
+  },
+  queryBuilder: QueryBuilder().where('status', 'active'),
+);
+
+// Watch posts by specific author
+db.watchCollection(
+  'posts',
+  (event) {
+    print('Author post event: ${event['event']}');
+  },
+  queryBuilder: QueryBuilder().where('author_id', 'user-123'),
+);
+```
+</Tab>
+
+<Tab title="Go">
+```go
+// Watch only active posts
+query := cocobase.NewQuery().Where("status", "active")
+conn, _ := client.WatchCollection(ctx, "posts",
+    func(event cocobase.Event) {
+        fmt.Printf("Active post event: %s\n", event.Event)
+    },
+    "active-posts-watcher",
+)
+
+// Note: Filtering is done client-side in Go SDK
+// Server-side filtering coming soon
+```
+</Tab>
+
+<Tab title="Python">
+```python
+# Connect with filters
+def on_open(ws):
+    ws.send(json.dumps({
+        'api_key': API_KEY,
+        'filters': {
+            'status': 'active',
+            'author_id': 'user-123'
+        }
+    }))
+
+ws = websocket.WebSocketApp(
+    'wss://api.cocobase.buzz/realtime/collections/posts',
+    on_message=on_message,
+    on_open=on_open
+)
+```
+</Tab>
+
+<Tab title="HTTP">
+```javascript
+const ws = new WebSocket('wss://api.cocobase.buzz/realtime/collections/posts');
+
+ws.onopen = () => {
+  ws.send(JSON.stringify({
+    api_key: 'your-api-key',
+    filters: {
+      status: 'active',
+      author_id: 'user-123'
+    }
+  }));
+};
+
+ws.onmessage = (event) => {
+  const data = JSON.parse(event.data);
+  console.log('Filtered event:', data);
+};
+```
+</Tab>
+</Tabs>
+
+---
+
+## Broadcast Messaging
+
+Send and receive messages across connected clients.
+
+<Tabs>
+<Tab title="JavaScript">
+```javascript
+// Join a room
+const room = db.joinRoom('chat-room-1', (message) => {
+  console.log('Message from:', message.from);
+  console.log('Content:', message.content);
+});
+
+// Send a message
+room.broadcast({
+  type: 'chat',
+  content: 'Hello everyone!',
+  timestamp: new Date().toISOString()
+});
+
+// Leave room
+room.leave();
+```
+</Tab>
+
+<Tab title="Dart">
+```dart
+// Join a room
+final room = db.joinRoom('chat-room-1', (message) {
+  print('Message from: ${message['from']}');
+  print('Content: ${message['content']}');
+});
+
+// Send a message
+room.broadcast({
+  'type': 'chat',
+  'content': 'Hello everyone!',
+  'timestamp': DateTime.now().toIso8601String(),
+});
+
+// Leave room
+room.leave();
+```
+</Tab>
+
+<Tab title="Go">
+```go
+// Broadcasting through WebSocket
+// Connect to a room channel
+conn, _ := client.WatchCollection(ctx, "rooms",
+    func(event cocobase.Event) {
+        if event.Event == "message" {
+            fmt.Printf("Message: %+v\n", event.Data)
+        }
+    },
+    "chat-room-1",
+)
+
+// Send a message
+// Implementation depends on your server setup
+```
+</Tab>
+
+<Tab title="Python">
+```python
+# Connect to a room
+def on_message(ws, message):
+    data = json.loads(message)
+    print(f"Message from: {data.get('from')}")
+    print(f"Content: {data.get('content')}")
+
+def on_open(ws):
+    # Join room
+    ws.send(json.dumps({
+        'api_key': API_KEY,
+        'action': 'join_room',
+        'room': 'chat-room-1'
+    }))
+
+ws = websocket.WebSocketApp(
+    'wss://api.cocobase.buzz/realtime/rooms/chat-room-1',
+    on_message=on_message,
+    on_open=on_open
+)
+
+# Send a message
+ws.send(json.dumps({
+    'action': 'broadcast',
+    'content': 'Hello everyone!',
+    'timestamp': datetime.utcnow().isoformat()
+}))
+```
+</Tab>
+
+<Tab title="HTTP">
+```javascript
+const ws = new WebSocket('wss://api.cocobase.buzz/realtime/rooms/chat-room-1');
+
+ws.onopen = () => {
+  // Join room
+  ws.send(JSON.stringify({
+    api_key: 'your-api-key',
+    action: 'join_room'
+  }));
+};
+
+ws.onmessage = (event) => {
+  const message = JSON.parse(event.data);
+  console.log('Message from:', message.from);
+  console.log('Content:', message.content);
+};
+
+// Send a message
+function sendMessage(content) {
+  ws.send(JSON.stringify({
+    action: 'broadcast',
+    content: content,
+    timestamp: new Date().toISOString()
+  }));
+}
+
+sendMessage('Hello everyone!');
+```
+</Tab>
+</Tabs>
+
+---
+
+## Reconnection Handling
+
+Handle connection drops and automatic reconnection.
+
+<Tabs>
+<Tab title="JavaScript">
+```javascript
+class ResilientWatcher {
+  constructor(db, collection) {
+    this.db = db;
+    this.collection = collection;
+    this.retryCount = 0;
+    this.maxRetries = 5;
+    this.connection = null;
+  }
+
+  watch(handler) {
+    try {
+      this.connection = this.db.watchCollection(
+        this.collection,
+        handler,
+        {
+          onConnected: () => {
+            console.log('✓ Connected');
+            this.retryCount = 0; // Reset on success
+          },
+          onDisconnected: () => {
+            console.log('✗ Disconnected, reconnecting...');
+            this.reconnect(handler);
+          },
+          onError: (error) => {
+            console.error('Error:', error);
+            this.reconnect(handler);
+          }
+        }
+      );
+    } catch (error) {
+      console.error('Failed to connect:', error);
+      this.reconnect(handler);
+    }
+  }
+
+  reconnect(handler) {
+    if (this.retryCount >= this.maxRetries) {
+      console.error('Max retries reached');
+      return;
+    }
+
+    this.retryCount++;
+    const delay = Math.min(1000 * Math.pow(2, this.retryCount), 30000);
+
+    console.log(`Retry ${this.retryCount} in ${delay}ms`);
+
+    setTimeout(() => {
+      this.watch(handler);
+    }, delay);
+  }
+
+  close() {
+    if (this.connection) {
+      this.connection.close();
+    }
+  }
+}
+
+// Usage
+const watcher = new ResilientWatcher(db, 'posts');
+watcher.watch((event) => {
+  console.log('Event:', event);
+});
+```
+</Tab>
+
+<Tab title="Dart">
+```dart
+class ResilientWatcher {
+  final Cocobase db;
+  final String collection;
+  int retryCount = 0;
+  static const maxRetries = 5;
+  static const initialDelay = Duration(seconds: 2);
+
+  ResilientWatcher(this.db, this.collection);
+
+  Future<void> watch(Function(dynamic) handler) async {
+    try {
+      await db.watchCollection(
+        collection,
+        (event) {
+          if (event['event'] == 'connected') {
+            retryCount = 0; // Reset on success
+            print('✓ Connected');
+          }
+          handler(event);
+        },
+        onConnectionError: () {
+          print('✗ Connection error, reconnecting...');
+          _reconnect(handler);
+        },
+      );
+    } catch (e) {
+      print('Failed to connect: $e');
+      _reconnect(handler);
+    }
+  }
+
+  Future<void> _reconnect(Function(dynamic) handler) async {
+    if (retryCount >= maxRetries) {
+      print('Max retries reached');
+      return;
+    }
+
+    retryCount++;
+    final delay = initialDelay * (1 << retryCount);
+
+    print('Retry $retryCount in ${delay.inSeconds}s');
+
+    await Future.delayed(delay);
+    await watch(handler);
+  }
+}
+
+// Usage
+final watcher = ResilientWatcher(db, 'posts');
+await watcher.watch((event) {
+  print('Event: ${event['event']}');
+});
+```
+</Tab>
+
+<Tab title="Go">
+```go
+type ResilientWatcher struct {
+    client     *cocobase.Client
+    collection string
+    retryCount int
+    maxRetries int
+}
+
+func NewResilientWatcher(client *cocobase.Client, collection string) *ResilientWatcher {
+    return &ResilientWatcher{
+        client:     client,
+        collection: collection,
+        maxRetries: 5,
+    }
+}
+
+func (w *ResilientWatcher) Watch(ctx context.Context, handler func(cocobase.Event)) error {
+    for {
+        conn, err := w.client.WatchCollection(ctx, w.collection, handler, "")
+        if err != nil {
+            if w.retryCount >= w.maxRetries {
+                return fmt.Errorf("max retries reached")
+            }
+
+            w.retryCount++
+            delay := time.Duration(math.Min(
+                float64(time.Second)*math.Pow(2, float64(w.retryCount)),
+                float64(30*time.Second),
+            ))
+
+            fmt.Printf("Retry %d in %v\n", w.retryCount, delay)
+            time.Sleep(delay)
+            continue
+        }
+
+        w.retryCount = 0 // Reset on success
+        fmt.Println("✓ Connected")
+
+        // Wait for connection to close
+        for !conn.IsClosed() {
+            time.Sleep(1 * time.Second)
+        }
+
+        fmt.Println("✗ Disconnected, reconnecting...")
+        time.Sleep(2 * time.Second)
+    }
+}
+
+// Usage
+watcher := NewResilientWatcher(client, "posts")
+go watcher.Watch(ctx, func(event cocobase.Event) {
+    fmt.Printf("Event: %s\n", event.Event)
+})
+```
+</Tab>
+
+<Tab title="Python">
+```python
+import time
+from threading import Thread
+
+class ResilientWatcher:
+    def __init__(self, url, api_key):
+        self.url = url
+        self.api_key = api_key
+        self.retry_count = 0
+        self.max_retries = 5
+        self.ws = None
+
+    def watch(self, on_message_handler):
+        def on_error(ws, error):
+            print(f"✗ Error: {error}")
+            self.reconnect(on_message_handler)
+
+        def on_close(ws, close_status_code, close_msg):
+            print("✗ Disconnected, reconnecting...")
+            self.reconnect(on_message_handler)
+
+        def on_open(ws):
+            print("✓ Connected")
+            self.retry_count = 0
+            ws.send(json.dumps({'api_key': self.api_key}))
+
+        self.ws = websocket.WebSocketApp(
+            self.url,
+            on_message=on_message_handler,
+            on_error=on_error,
+            on_close=on_close,
+            on_open=on_open
+        )
+
+        wst = Thread(target=self.ws.run_forever)
+        wst.daemon = True
+        wst.start()
+
+    def reconnect(self, on_message_handler):
+        if self.retry_count >= self.max_retries:
+            print("Max retries reached")
+            return
+
+        self.retry_count += 1
+        delay = min(2 ** self.retry_count, 30)
+
+        print(f"Retry {self.retry_count} in {delay}s")
+        time.sleep(delay)
+
+        self.watch(on_message_handler)
+
+# Usage
+def handle_message(ws, message):
+    event = json.loads(message)
+    print(f"Event: {event['event']}")
+
+watcher = ResilientWatcher(
+    'wss://api.cocobase.buzz/realtime/collections/posts',
+    'your-api-key'
+)
+watcher.watch(handle_message)
+```
+</Tab>
+
+<Tab title="HTTP">
+```javascript
+class ResilientWebSocket {
+  constructor(url, apiKey) {
+    this.url = url;
+    this.apiKey = apiKey;
+    this.retryCount = 0;
+    this.maxRetries = 5;
+    this.ws = null;
+  }
+
+  connect(onMessage) {
+    this.ws = new WebSocket(this.url);
+
+    this.ws.onopen = () => {
+      console.log('✓ Connected');
+      this.retryCount = 0;
+      this.ws.send(JSON.stringify({ api_key: this.apiKey }));
+    };
+
+    this.ws.onmessage = onMessage;
+
+    this.ws.onerror = (error) => {
+      console.error('✗ Error:', error);
+    };
+
+    this.ws.onclose = () => {
+      console.log('✗ Disconnected, reconnecting...');
+      this.reconnect(onMessage);
+    };
+  }
+
+  reconnect(onMessage) {
+    if (this.retryCount >= this.maxRetries) {
+      console.error('Max retries reached');
+      return;
+    }
+
+    this.retryCount++;
+    const delay = Math.min(1000 * Math.pow(2, this.retryCount), 30000);
+
+    console.log(`Retry ${this.retryCount} in ${delay}ms`);
+
+    setTimeout(() => {
+      this.connect(onMessage);
+    }, delay);
+  }
+
+  close() {
+    if (this.ws) {
+      this.ws.close();
+    }
+  }
+}
+
+// Usage
+const ws = new ResilientWebSocket(
+  'wss://api.cocobase.buzz/realtime/collections/posts',
+  'your-api-key'
+);
+
+ws.connect((event) => {
+  const data = JSON.parse(event.data);
+  console.log('Event:', data);
+});
+```
+</Tab>
+</Tabs>
+
+---
+
+## Real-World Examples
+
+### Live Chat Application
+
+<Tabs>
+<Tab title="JavaScript">
+```javascript
+class ChatRoom {
+  constructor(db, roomId, userId) {
+    this.db = db;
+    this.roomId = roomId;
+    this.userId = userId;
+    this.messages = [];
+  }
+
+  async connect() {
+    // Watch for new messages
+    this.connection = this.db.watchCollection(
+      'messages',
+      (event) => {
+        if (event.type === 'create') {
+          this.messages.push(event.data);
+          this.displayMessage(event.data);
+        }
+      },
+      {
+        filters: { room_id: this.roomId }
+      }
+    );
+  }
+
+  async sendMessage(content) {
+    await this.db.createDocument('messages', {
+      room_id: this.roomId,
+      user_id: this.userId,
+      content: content,
+      timestamp: new Date().toISOString()
+    });
+  }
+
+  displayMessage(message) {
+    const messageEl = document.createElement('div');
+    messageEl.className = 'message';
+    messageEl.textContent = `${message.user_id}: ${message.content}`;
+    document.getElementById('messages').appendChild(messageEl);
+  }
+
+  disconnect() {
+    if (this.connection) {
+      this.connection.close();
+    }
+  }
+}
+
+// Usage
+const chat = new ChatRoom(db, 'room-123', 'user-456');
+await chat.connect();
+
+document.getElementById('send-btn').addEventListener('click', () => {
+  const input = document.getElementById('message-input');
+  chat.sendMessage(input.value);
+  input.value = '';
+});
+```
+</Tab>
+
+<Tab title="Dart">
+```dart
+class ChatRoom {
+  final Cocobase db;
+  final String roomId;
+  final String userId;
+  final List<Document> messages = [];
+  Connection? connection;
+
+  ChatRoom(this.db, this.roomId, this.userId);
+
+  Future<void> connect() async {
+    connection = db.watchCollection(
+      'messages',
+      (event) {
+        if (event.type == 'create') {
+          messages.add(event.data);
+          _displayMessage(event.data);
+        }
+      },
+      queryBuilder: QueryBuilder().where('room_id', roomId),
+    );
+  }
+
+  Future<void> sendMessage(String content) async {
+    await db.createDocument('messages', {
+      'room_id': roomId,
+      'user_id': userId,
+      'content': content,
+      'timestamp': DateTime.now().toIso8601String(),
+    });
+  }
+
+  void _displayMessage(Document message) {
+    print('${message.data['user_id']}: ${message.data['content']}');
+    // Update UI
+  }
+
+  void disconnect() {
+    if (connection != null) {
+      db.closeConnection(connection!);
+    }
+  }
+}
+
+// Usage
+final chat = ChatRoom(db, 'room-123', 'user-456');
+await chat.connect();
+
+// Send message
+await chat.sendMessage('Hello everyone!');
+```
+</Tab>
+
+<Tab title="Go">
+```go
+type ChatRoom struct {
+    client   *cocobase.Client
+    roomID   string
+    userID   string
+    messages []cocobase.Document
+    conn     *cocobase.Connection
+}
+
+func NewChatRoom(client *cocobase.Client, roomID, userID string) *ChatRoom {
+    return &ChatRoom{
+        client:   client,
+        roomID:   roomID,
+        userID:   userID,
+        messages: make([]cocobase.Document, 0),
+    }
+}
+
+func (c *ChatRoom) Connect(ctx context.Context) error {
+    conn, err := c.client.WatchCollection(
+        ctx,
+        "messages",
+        func(event cocobase.Event) {
+            if event.Event == "create" {
+                if roomID, ok := event.Data.Data["room_id"].(string); ok {
+                    if roomID == c.roomID {
+                        c.messages = append(c.messages, event.Data)
+                        c.displayMessage(event.Data)
+                    }
+                }
+            }
+        },
+        "chat-"+c.roomID,
+    )
+
+    if err != nil {
+        return err
+    }
+
+    c.conn = &conn
+    return nil
+}
+
+func (c *ChatRoom) SendMessage(ctx context.Context, content string) error {
+    data := map[string]interface{}{
+        "room_id":   c.roomID,
+        "user_id":   c.userID,
+        "content":   content,
+        "timestamp": time.Now().Format(time.RFC3339),
+    }
+
+    _, err := c.client.CreateDocument(ctx, "messages", data)
+    return err
+}
+
+func (c *ChatRoom) displayMessage(message cocobase.Document) {
+    userID := message.Data["user_id"]
+    content := message.Data["content"]
+    fmt.Printf("%v: %v\n", userID, content)
+}
+
+func (c *ChatRoom) Disconnect() error {
+    if c.conn != nil {
+        return (*c.conn).Close()
+    }
+    return nil
+}
+
+// Usage
+chat := NewChatRoom(client, "room-123", "user-456")
+err := chat.Connect(ctx)
+if err != nil {
+    log.Fatal(err)
+}
+defer chat.Disconnect()
+
+chat.SendMessage(ctx, "Hello everyone!")
+```
+</Tab>
+
+<Tab title="Python">
+```python
+import requests
+import websocket
+import json
+from threading import Thread
+
+class ChatRoom:
+    def __init__(self, api_key, room_id, user_id):
+        self.api_key = api_key
+        self.room_id = room_id
+        self.user_id = user_id
+        self.messages = []
+        self.ws = None
+
+    def connect(self):
+        def on_message(ws, message):
+            event = json.loads(message)
+            if event['event'] == 'create':
+                data = event['data']
+                if data.get('room_id') == self.room_id:
+                    self.messages.append(data)
+                    self.display_message(data)
+
+        def on_open(ws):
+            ws.send(json.dumps({
+                'api_key': self.api_key,
+                'filters': {'room_id': self.room_id}
+            }))
+
+        self.ws = websocket.WebSocketApp(
+            'wss://api.cocobase.buzz/realtime/collections/messages',
+            on_message=on_message,
+            on_open=on_open
+        )
+
+        wst = Thread(target=self.ws.run_forever)
+        wst.daemon = True
+        wst.start()
+
+    def send_message(self, content):
+        headers = {
+            'X-API-Key': self.api_key,
+            'Content-Type': 'application/json'
+        }
+
+        data = {
+            'room_id': self.room_id,
+            'user_id': self.user_id,
+            'content': content,
+            'timestamp': datetime.utcnow().isoformat()
+        }
+
+        requests.post(
+            'https://api.cocobase.buzz/collections/messages/documents',
+            headers=headers,
+            json=data
+        )
+
+    def display_message(self, message):
+        print(f"{message['user_id']}: {message['content']}")
+
+    def disconnect(self):
+        if self.ws:
+            self.ws.close()
+
+# Usage
+chat = ChatRoom('your-api-key', 'room-123', 'user-456')
+chat.connect()
+
+# Send message
+chat.send_message('Hello everyone!')
+```
+</Tab>
+
+<Tab title="HTTP">
+```javascript
+class ChatRoom {
+  constructor(apiKey, roomId, userId) {
+    this.apiKey = apiKey;
+    this.roomId = roomId;
+    this.userId = userId;
+    this.messages = [];
+    this.ws = null;
+  }
+
+  connect() {
+    this.ws = new WebSocket('wss://api.cocobase.buzz/realtime/collections/messages');
+
+    this.ws.onopen = () => {
+      this.ws.send(JSON.stringify({
+        api_key: this.apiKey,
+        filters: { room_id: this.roomId }
+      }));
+    };
+
+    this.ws.onmessage = (event) => {
+      const data = JSON.parse(event.data);
+      if (data.event === 'create' && data.data.room_id === this.roomId) {
+        this.messages.push(data.data);
+        this.displayMessage(data.data);
+      }
+    };
+  }
+
+  async sendMessage(content) {
+    const response = await fetch('https://api.cocobase.buzz/collections/messages/documents', {
+      method: 'POST',
+      headers: {
+        'X-API-Key': this.apiKey,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        room_id: this.roomId,
+        user_id: this.userId,
+        content: content,
+        timestamp: new Date().toISOString()
+      })
+    });
+
+    return response.json();
+  }
+
+  displayMessage(message) {
+    const messageEl = document.createElement('div');
+    messageEl.textContent = `${message.user_id}: ${message.content}`;
+    document.getElementById('messages').appendChild(messageEl);
+  }
+
+  disconnect() {
+    if (this.ws) {
+      this.ws.close();
+    }
+  }
+}
+
+// Usage
+const chat = new ChatRoom('your-api-key', 'room-123', 'user-456');
+chat.connect();
+
+document.getElementById('send-btn').addEventListener('click', async () => {
+  const input = document.getElementById('message-input');
+  await chat.sendMessage(input.value);
+  input.value = '';
+});
+```
+</Tab>
+</Tabs>
+
+---
+
+## Best Practices
+
+<AccordionGroup>
+<Accordion title="1. Always Close Connections">
+Properly close WebSocket connections when done to free up resources.
+
+```javascript
+// ✓ Good: Close when component unmounts
+useEffect(() => {
+  const connection = db.watchCollection('posts', handler);
+
+  return () => {
+    connection.close();
+  };
+}, []);
+```
+</Accordion>
+
+<Accordion title="2. Filter Events Server-Side">
+Use filters to reduce bandwidth and only receive relevant events.
+
+```javascript
+// ✓ Good: Filter on server
+db.watchCollection('posts', handler, {
+  filters: { author_id: userId }
+});
+
+// ✗ Bad: Filter on client
+db.watchCollection('posts', (event) => {
+  if (event.data.author_id === userId) {
+    handler(event);
+  }
+});
+```
+</Accordion>
+
+<Accordion title="3. Implement Reconnection Logic">
+Handle connection drops gracefully with exponential backoff.
+</Accordion>
+
+<Accordion title="4. Debounce UI Updates">
+Don't update UI on every event - batch updates for better performance.
+
+```javascript
+// ✓ Good: Debounce updates
+let updateTimeout;
+db.watchCollection('posts', (event) => {
+  clearTimeout(updateTimeout);
+  updateTimeout = setTimeout(() => {
+    updateUI();
+  }, 300);
+});
+```
+</Accordion>
+
+<Accordion title="5. Handle Errors">
+Always implement error handlers for WebSocket connections.
+
+```javascript
+// ✓ Good: Error handling
+db.watchCollection('posts', handler, {
+  onError: (error) => {
+    console.error('Connection error:', error);
+    showErrorNotification();
+  }
+});
+```
+</Accordion>
+</AccordionGroup>
+
+---
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="CRUD Operations" icon="database" href="/features/crud-operations">
+    Master basic database operations
+  </Card>
+  <Card title="Query & Filtering" icon="filter" href="/features/querying">
+    Filter real-time events with queries
+  </Card>
+  <Card title="Authentication" icon="shield" href="/features/authentication">
+    Secure real-time connections
+  </Card>
+  <Card title="Relationships" icon="link" href="/features/relationships">
+    Watch related documents
+  </Card>
+</CardGroup>

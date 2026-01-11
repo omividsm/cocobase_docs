@@ -1,0 +1,512 @@
+---
+title: Getting Started
+description: Get up and running with Cocobase in minutes
+---
+
+# Getting Started with Cocobase
+
+Welcome to Cocobase! This guide will help you set up and make your first API call in just a few minutes.
+
+## Prerequisites
+
+Before you begin, make sure you have:
+
+1. A Cocobase account - [Sign up for free](https://cocobase.buzz)
+2. An API key from your project dashboard
+3. Your development environment set up for your preferred language
+
+## Installation
+
+Choose your language and install the Cocobase SDK:
+
+<Tabs>
+  <Tab title="JavaScript">
+    **npm**
+    ```bash
+    npm install cocobase
+    ```
+
+    **yarn**
+    ```bash
+    yarn add cocobase
+    ```
+
+    **pnpm**
+    ```bash
+    pnpm add cocobase
+    ```
+  </Tab>
+
+  <Tab title="Dart">
+    Add Cocobase to your `pubspec.yaml`:
+
+    ```yaml
+    dependencies:
+      coco_base_flutter: ^latest_version
+    ```
+
+    Then run:
+    ```bash
+    flutter pub get
+    ```
+  </Tab>
+
+  <Tab title="Go">
+    ```bash
+    go get github.com/cocobase/cocobase-go
+    ```
+  </Tab>
+
+  <Tab title="Python">
+    ```bash
+    pip install cocobase
+    ```
+  </Tab>
+
+  <Tab title="HTTP">
+    No installation required! Use any HTTP client or tool like cURL, Postman, or your favorite request library.
+  </Tab>
+</Tabs>
+
+## Configuration
+
+Initialize Cocobase with your API key:
+
+<Tabs>
+  <Tab title="JavaScript">
+    ```typescript
+    import { Cocobase } from "cocobase";
+
+    const db = new Cocobase({
+      apiKey: "YOUR_API_KEY",
+    });
+    ```
+
+    **For Next.js projects:**
+    ```typescript
+    // lib/cocobase.ts
+    import { Cocobase } from "cocobase";
+
+    export const db = new Cocobase({
+      apiKey: process.env.NEXT_PUBLIC_COCOBASE_API_KEY,
+    });
+    ```
+
+    **For React projects:**
+    ```typescript
+    // src/lib/cocobase.ts
+    import { Cocobase } from "cocobase";
+
+    export const db = new Cocobase({
+      apiKey: import.meta.env.VITE_COCOBASE_API_KEY,
+    });
+    ```
+  </Tab>
+
+  <Tab title="Dart">
+    ```dart
+    import 'package:coco_base_flutter/coco_base_flutter.dart';
+
+    void main() {
+      // Create configuration
+      final config = CocobaseConfig(
+        apiKey: "YOUR_API_KEY",
+        baseUrl: "https://api.cocobase.buzz", // Optional
+      );
+
+      // Initialize client
+      final db = Cocobase(config);
+    }
+    ```
+
+    **For Flutter apps with environment variables:**
+    ```dart
+    import 'package:flutter_dotenv/flutter_dotenv.dart';
+
+    await dotenv.load();
+
+    final config = CocobaseConfig(
+      apiKey: dotenv.env['COCOBASE_API_KEY']!,
+    );
+    ```
+  </Tab>
+
+  <Tab title="Go">
+    ```go
+    package main
+
+    import (
+        "context"
+        "github.com/cocobase/cocobase-go"
+    )
+
+    func main() {
+        // Create client
+        client := cocobase.NewClient(cocobase.Config{
+            APIKey: "YOUR_API_KEY",
+        })
+
+        // Create context
+        ctx := context.Background()
+    }
+    ```
+
+    **With custom configuration:**
+    ```go
+    client := cocobase.NewClient(cocobase.Config{
+        APIKey:     os.Getenv("COCOBASE_API_KEY"),
+        BaseURL:    "https://api.cocobase.buzz",
+        HTTPClient: &http.Client{Timeout: 30 * time.Second},
+    })
+    ```
+  </Tab>
+
+  <Tab title="Python">
+    ```python
+    from cocobase import Cocobase
+
+    # Initialize client
+    db = Cocobase(api_key="YOUR_API_KEY")
+    ```
+
+    **With environment variables:**
+    ```python
+    import os
+    from cocobase import Cocobase
+
+    db = Cocobase(api_key=os.getenv("COCOBASE_API_KEY"))
+    ```
+  </Tab>
+
+  <Tab title="HTTP">
+    Set up your base URL and headers:
+
+    **Base URL:**
+    ```
+    https://api.cocobase.buzz
+    ```
+
+    **Headers:**
+    ```http
+    Authorization: Bearer YOUR_API_KEY
+    Content-Type: application/json
+    ```
+  </Tab>
+</Tabs>
+
+## Your First Request
+
+Let's create a document in a collection called "users":
+
+<Tabs>
+  <Tab title="JavaScript">
+    ```typescript
+    // Create a new user
+    const user = await db.createDocument("users", {
+      name: "Alice Johnson",
+      email: "alice@example.com",
+      role: "developer",
+    });
+
+    console.log("Created user:", user);
+    ```
+
+    **Response:**
+    ```json
+    {
+      "_id": "507f1f77bcf86cd799439011",
+      "name": "Alice Johnson",
+      "email": "alice@example.com",
+      "role": "developer",
+      "createdAt": "2024-01-15T10:30:00Z",
+      "updatedAt": "2024-01-15T10:30:00Z"
+    }
+    ```
+  </Tab>
+
+  <Tab title="Dart">
+    ```dart
+    // Create a new user
+    final user = await db.createDocument('users', {
+      'name': 'Alice Johnson',
+      'email': 'alice@example.com',
+      'role': 'developer',
+    });
+
+    print('Created user: $user');
+    ```
+
+    **Response:**
+    ```dart
+    {
+      '_id': '507f1f77bcf86cd799439011',
+      'name': 'Alice Johnson',
+      'email': 'alice@example.com',
+      'role': 'developer',
+      'createdAt': '2024-01-15T10:30:00Z',
+      'updatedAt': '2024-01-15T10:30:00Z'
+    }
+    ```
+  </Tab>
+
+  <Tab title="Go">
+    ```go
+    // Create a new user
+    user, err := client.CreateDocument(ctx, "users", map[string]any{
+        "name":  "Alice Johnson",
+        "email": "alice@example.com",
+        "role":  "developer",
+    })
+
+    if err != nil {
+        log.Fatal(err)
+    }
+
+    fmt.Printf("Created user: %+v\n", user)
+    ```
+
+    **Response:**
+    ```go
+    map[string]interface{}{
+        "_id":       "507f1f77bcf86cd799439011",
+        "name":      "Alice Johnson",
+        "email":     "alice@example.com",
+        "role":      "developer",
+        "createdAt": "2024-01-15T10:30:00Z",
+        "updatedAt": "2024-01-15T10:30:00Z",
+    }
+    ```
+  </Tab>
+
+  <Tab title="Python">
+    ```python
+    # Create a new user
+    user = db.create_document("users", {
+        "name": "Alice Johnson",
+        "email": "alice@example.com",
+        "role": "developer"
+    })
+
+    print(f"Created user: {user}")
+    ```
+
+    **Response:**
+    ```python
+    {
+        "_id": "507f1f77bcf86cd799439011",
+        "name": "Alice Johnson",
+        "email": "alice@example.com",
+        "role": "developer",
+        "createdAt": "2024-01-15T10:30:00Z",
+        "updatedAt": "2024-01-15T10:30:00Z"
+    }
+    ```
+  </Tab>
+
+  <Tab title="HTTP">
+    ```bash
+    curl -X POST https://api.cocobase.buzz/collections/users \
+      -H "Authorization: Bearer YOUR_API_KEY" \
+      -H "Content-Type: application/json" \
+      -d '{
+        "name": "Alice Johnson",
+        "email": "alice@example.com",
+        "role": "developer"
+      }'
+    ```
+
+    **Response:**
+    ```json
+    {
+      "_id": "507f1f77bcf86cd799439011",
+      "name": "Alice Johnson",
+      "email": "alice@example.com",
+      "role": "developer",
+      "createdAt": "2024-01-15T10:30:00Z",
+      "updatedAt": "2024-01-15T10:30:00Z"
+    }
+    ```
+  </Tab>
+</Tabs>
+
+## Reading Data
+
+Now let's retrieve the document we just created:
+
+<Tabs>
+  <Tab title="JavaScript">
+    ```typescript
+    // Get all users
+    const users = await db.listDocuments("users");
+    console.log("All users:", users);
+
+    // Get a specific user by ID
+    const user = await db.getDocument("users", "507f1f77bcf86cd799439011");
+    console.log("User:", user);
+    ```
+  </Tab>
+
+  <Tab title="Dart">
+    ```dart
+    // Get all users
+    final users = await db.listDocuments('users');
+    print('All users: $users');
+
+    // Get a specific user by ID
+    final user = await db.getDocument('users', '507f1f77bcf86cd799439011');
+    print('User: $user');
+    ```
+  </Tab>
+
+  <Tab title="Go">
+    ```go
+    // Get all users
+    users, err := client.ListDocuments(ctx, "users", nil)
+    if err != nil {
+        log.Fatal(err)
+    }
+    fmt.Printf("All users: %+v\n", users)
+
+    // Get a specific user by ID
+    user, err := client.GetDocument(ctx, "users", "507f1f77bcf86cd799439011")
+    if err != nil {
+        log.Fatal(err)
+    }
+    fmt.Printf("User: %+v\n", user)
+    ```
+  </Tab>
+
+  <Tab title="Python">
+    ```python
+    # Get all users
+    users = db.list_documents("users")
+    print(f"All users: {users}")
+
+    # Get a specific user by ID
+    user = db.get_document("users", "507f1f77bcf86cd799439011")
+    print(f"User: {user}")
+    ```
+  </Tab>
+
+  <Tab title="HTTP">
+    ```bash
+    # Get all users
+    curl -X GET https://api.cocobase.buzz/collections/users \
+      -H "Authorization: Bearer YOUR_API_KEY"
+
+    # Get a specific user by ID
+    curl -X GET https://api.cocobase.buzz/collections/users/507f1f77bcf86cd799439011 \
+      -H "Authorization: Bearer YOUR_API_KEY"
+    ```
+  </Tab>
+</Tabs>
+
+## Environment Variables
+
+For security, always use environment variables for your API key:
+
+<Tabs>
+  <Tab title="JavaScript">
+    Create a `.env.local` file:
+    ```bash
+    NEXT_PUBLIC_COCOBASE_API_KEY=your_api_key_here
+    # or for Vite/React
+    VITE_COCOBASE_API_KEY=your_api_key_here
+    ```
+  </Tab>
+
+  <Tab title="Dart">
+    Create a `.env` file:
+    ```bash
+    COCOBASE_API_KEY=your_api_key_here
+    ```
+
+    Add to `pubspec.yaml`:
+    ```yaml
+    dependencies:
+      flutter_dotenv: ^5.0.2
+    ```
+  </Tab>
+
+  <Tab title="Go">
+    Create a `.env` file:
+    ```bash
+    COCOBASE_API_KEY=your_api_key_here
+    ```
+
+    Use with a package like `godotenv`:
+    ```go
+    import "github.com/joho/godotenv"
+
+    godotenv.Load()
+    apiKey := os.Getenv("COCOBASE_API_KEY")
+    ```
+  </Tab>
+
+  <Tab title="Python">
+    Create a `.env` file:
+    ```bash
+    COCOBASE_API_KEY=your_api_key_here
+    ```
+
+    Use with `python-dotenv`:
+    ```python
+    from dotenv import load_dotenv
+    load_dotenv()
+    ```
+  </Tab>
+
+  <Tab title="HTTP">
+    Store your API key securely and never commit it to version control.
+  </Tab>
+</Tabs>
+
+<Warning>
+  Never commit your `.env` files to version control. Add them to `.gitignore`:
+  ```bash
+  .env
+  .env.local
+  .env*.local
+  ```
+</Warning>
+
+## Next Steps
+
+Now that you've made your first request, explore these features:
+
+<CardGroup cols={2}>
+  <Card title="Authentication" icon="lock" href="/core-concepts/authentication">
+    Add user registration and login to your app
+  </Card>
+  <Card title="Query & Filtering" icon="filter" href="/features/querying">
+    Learn to filter and search your data
+  </Card>
+  <Card title="Real-time Updates" icon="bolt" href="/features/realtime">
+    Subscribe to live data changes
+  </Card>
+  <Card title="File Storage" icon="cloud" href="/features/file-storage">
+    Upload and manage files
+  </Card>
+</CardGroup>
+
+## Common Issues
+
+<AccordionGroup>
+  <Accordion title="Authentication Error: Invalid API Key">
+    Make sure your API key is correct and active. You can find it in your [Cocobase dashboard](https://cocobase.buzz/dashboard).
+  </Accordion>
+
+  <Accordion title="CORS Error in Browser">
+    Add your domain to the allowed origins in your Cocobase project settings.
+  </Accordion>
+
+  <Accordion title="TypeScript Types Not Working">
+    Make sure you're using TypeScript 4.5+ and have `@types/node` installed.
+  </Accordion>
+</AccordionGroup>
+
+## Need Help?
+
+- Join our [Discord community](https://discord.gg/cocobase)
+- Check out [code examples](/examples)
+- Email us at hello@cocobase.buzz
