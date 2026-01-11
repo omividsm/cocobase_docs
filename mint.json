@@ -1,8 +1,8 @@
 {
   "name": "Cocobase",
   "logo": {
-    "dark": "/logo/dark.svg",
-    "light": "/logo/light.svg"
+    "dark": "/logo/logo.webp",
+    "light": "/logo/logo.webp"
   },
   "favicon": "/favicon.svg",
   "colors": {
@@ -38,7 +38,7 @@
     {
       "name": "Discord Community",
       "icon": "discord",
-      "url": "https://discord.gg/cocobase"
+      "url": "https://discord.gg/5MvrpzUAP"
     },
     {
       "name": "GitHub",

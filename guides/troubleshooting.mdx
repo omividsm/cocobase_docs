@@ -22,7 +22,7 @@ Error: API request failed (status: 401)
 
 1. **Verify API Key is Correct**
 
-   <Tabs>
+<Tabs>
 <Tab title="Flutter">
 ```dart
 // Check your API key is correct
@@ -32,7 +32,7 @@ final config = CocobaseConfig(
 ```
 </Tab>
 
-   <Tab title="JavaScript">
+<Tab title="JavaScript">
 ```javascript
 const config = {
   apiKey: "YOUR_API_KEY_HERE",  // Copy from dashboard
@@ -40,11 +40,14 @@ const config = {
 ```
 </Tab>
 
-   <Tab title="Python">
-     ```python # Cloud Functions # Verify API key in dashboard settings ```
-   </Tab>
+<Tab title="Python">
+```python
+# Cloud Functions
+# Verify API key in dashboard settings
+```
+</Tab>
 
-   <Tab title="Go">
+<Tab title="Go">
 ```go
 config := cocobase.Config{
     APIKey: "YOUR_API_KEY_HERE",  // Copy from dashboard
@@ -347,7 +350,7 @@ final page2 = await db.listDocuments("books", filters: {
 
 ## Type Conversion Errors
 
-### Issue: "type '\_InternalLinkedHashMap<String, dynamic>' is not a subtype"
+### Issue: `type '_InternalLinkedHashMap<String, dynamic>' is not a subtype`
 
 **Cause:** Type mismatch in `fromJson()` method
 

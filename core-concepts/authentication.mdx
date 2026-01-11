@@ -1354,10 +1354,18 @@ Common authentication errors and how to handle them:
 
 {" "}
 <Tab title="Python">
-  ```python try: db.auth.login(email, password) except InvalidCredentialsError:
-  print("Invalid email or password") except TwoFactorRequiredError: print("2FA
-  code required") except UserNotFoundError: print("User not found") except
-  CocobaseError as e: print(f"Authentication error: {e}") ```
+  ```python
+try:
+    db.auth.login(email, password)
+except InvalidCredentialsError:
+    print("Invalid email or password")
+except TwoFactorRequiredError:
+    print("2FA code required")
+except UserNotFoundError:
+    print("User not found")
+except CocobaseError as e:
+    print(f"Authentication error: {e}")
+  ```
 </Tab>
 
   <Tab title="HTTP">
